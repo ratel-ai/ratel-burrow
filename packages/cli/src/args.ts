@@ -7,7 +7,6 @@ export type CliCommand =
       traces: string[];
       intentGraphs: string[];
       catalogs: string[];
-      allProjects: boolean;
       open: boolean;
       port: number;
     }
@@ -19,15 +18,14 @@ export const HELP = `ratel-burrow — a read-only window into Ratel
 
 Usage: ratel-burrow [options]
 
-With no options, Burrow reads ratel-local's telemetry for this folder
-(~/.ratel/telemetry/<project>/) and ./.ratel/burrow (see burrowConfig()).
+With no options, Burrow reads ./.ratel/burrow: point your Ratel SDK at it
+with burrowConfig() (TypeScript) or burrow_config() (Python).
 
 Options:
   --dir <path>           a Burrow dir (traces/, intent-graph.json, catalog-snapshot.json)
   --trace <file|dir>     a Ratel JSONL trace file, or a dir of them
   --intent-graph <file>  an intent graph saved by LocalFileIntentGraphStorage
   --catalog <file>       a saved catalog.snapshot() JSON
-  --all-projects         read every ratel-local project, not just this folder's
   --port <n>             bind this port (default: a free one)
   --no-open              print the URL without opening a browser
   -h, --help             show this help
@@ -55,7 +53,6 @@ export function parseCliArgs(argv: string[]): CliCommand {
     traces: values.trace ?? [],
     intentGraphs: values["intent-graph"] ?? [],
     catalogs: values.catalog ?? [],
-    allProjects: values["all-projects"] ?? false,
     open: !values["no-open"],
     port,
   };
@@ -71,7 +68,6 @@ function parse(argv: string[]) {
       trace: { type: "string", multiple: true },
       "intent-graph": { type: "string", multiple: true },
       catalog: { type: "string", multiple: true },
-      "all-projects": { type: "boolean" },
       "no-open": { type: "boolean" },
       port: { type: "string" },
       help: { type: "boolean", short: "h" },

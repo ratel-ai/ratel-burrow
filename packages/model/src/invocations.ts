@@ -39,8 +39,8 @@ export function serverIndex(events: readonly TraceEvent[]): (toolId: string) => 
 }
 
 /**
- * Every tool and skill call in the log. ratel-local reports one tool call as
- * `invoke_*`, `upstream_invoke` and `gateway_invoke`; a session with `invoke_*`
+ * Every tool and skill call in the log. One call through an MCP gateway can be
+ * reported as `invoke_*`, `upstream_invoke` and `gateway_invoke`; a session with `invoke_*`
  * events is read from those alone, otherwise from `gateway_invoke`. Gateway errors
  * (an agent asking for an unknown tool id, say) are kept as failed calls.
  */

@@ -13,7 +13,7 @@ ratel-burrow                 # read-only UI on 127.0.0.1, opens your browser
 from ratel_ai import ToolCatalog
 from ratel_burrow import burrow_config, burrow_paths
 
-catalog = ToolCatalog(**burrow_config())          # JSONL traces → ./.ratel/burrow/traces
+catalog = ToolCatalog(**burrow_config())  # JSONL traces → ./.ratel/burrow/traces
 catalog.experimental_enable_catalog_definitions()  # descriptions + schemas for the Catalog screen
 # Adaptive ranking: LocalFileIntentGraphStorage(burrow_paths().intent_graph)
 ```

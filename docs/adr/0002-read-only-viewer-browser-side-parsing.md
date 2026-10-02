@@ -10,8 +10,7 @@ Accepted
 
 Ratel ships to TypeScript and Python users. A visualization tool for it must be installable
 from either ecosystem without asking a Python user to install Node, and it must never be able
-to change a Ratel configuration — Burrow observes, it does not manage (configuration is
-ratel-local's job).
+to change a Ratel configuration — Burrow observes, it does not manage.
 
 ## Decision
 

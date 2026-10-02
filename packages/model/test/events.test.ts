@@ -45,10 +45,10 @@ describe("parseTraceLine", () => {
 
 describe("parseTraceLog", () => {
   it("parses a whole v1 log, counting bad lines without failing", () => {
-    const log = parseTraceLog(fixture("v1-ratel-local.jsonl"));
-    expect(log.events).toHaveLength(12);
+    const log = parseTraceLog(fixture("v1-legacy.jsonl"));
+    expect(log.events).toHaveLength(11);
     expect(log.badLines).toBe(1);
-    expect(log.events.map((e) => e.type)).toContain("ratel_tool_payload");
+    expect(log.events.every((e) => e.known)).toBe(true);
   });
 
   it("parses a v2 log and sorts by timestamp", () => {
@@ -60,7 +60,7 @@ describe("parseTraceLog", () => {
   });
 
   it("merges several logs into one ordered stream", () => {
-    const log = parseTraceLog([fixture("v2-sdk.jsonl"), fixture("v1-ratel-local.jsonl")]);
+    const log = parseTraceLog([fixture("v2-sdk.jsonl"), fixture("v1-legacy.jsonl")]);
     expect(log.events[0]?.sessionId).toBe("s1");
     expect(log.events.at(-1)?.sessionId).toBe("s2");
   });

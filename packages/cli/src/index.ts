@@ -8,7 +8,6 @@ export {
 export {
   type DiscoveryOptions,
   discoverSources,
-  projectSlug,
   type Source,
   type SourceKind,
 } from "./discovery.js";

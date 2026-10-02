@@ -24,7 +24,7 @@ export function OverviewScreen() {
     .slice(0, 6);
   const now = Date.now();
   const [showAll, setShowAll] = useState(false);
-  // Newest first; long ratel-local histories collapse behind a toggle.
+  // Newest first; long trace histories collapse behind a toggle.
   const ordered = [...sources].sort((a, b) => b.mtime - a.mtime);
   const visibleSources = showAll ? ordered : ordered.slice(0, 8);
 
@@ -176,13 +176,12 @@ function SetupGuide() {
   return (
     <Empty title="No Ratel data found yet">
       <p>
-        Using <strong className="text-cream-dim">ratel-local</strong>? Run <Code>ratel-burrow</Code>{" "}
-        from the same project folder; it reads <Code>~/.ratel/telemetry/&lt;project&gt;/</Code>.
+        Add <Code>...burrowConfig()</Code> to your <Code>ratel()</Code> config (or{" "}
+        <Code>ToolCatalog(**burrow_config())</Code> in Python) and run <Code>ratel-burrow</Code>{" "}
+        from the same folder. Traces land in <Code>./.ratel/burrow</Code>.
       </p>
       <p className="mt-2">
-        Using the SDK? Add <Code>...burrowConfig()</Code> to your <Code>ratel()</Code> config (or{" "}
-        <Code>ToolCatalog(**burrow_config())</Code> in Python). Traces land in{" "}
-        <Code>./.ratel/burrow</Code>.
+        Already writing traces elsewhere? Pass <Code>--trace &lt;file|dir&gt;</Code>.
       </p>
     </Empty>
   );

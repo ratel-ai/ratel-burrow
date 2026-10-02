@@ -11,20 +11,10 @@ describe("estimateTokens", () => {
 });
 
 describe("estimateSavings", () => {
-  it("uses ratel-local's per-server payload estimate when definitions are missing", () => {
+  it("needs tool definitions to size the catalog", () => {
     const events = v1Events();
     const s = estimateSavings(events, buildCatalog(events));
-    // full = 400 tokens over 2 tools; searches return 2 and 0 hits → avg 1 → served 200.
-    expect(s).toMatchObject({
-      basis: "payload",
-      fullCatalogTokens: 400,
-      entryCount: 2,
-      searches: 2,
-      avgReturned: 1,
-      servedTokensPerSearch: 200,
-      savedPerSearch: 200,
-      savedTotal: 400,
-    });
+    expect(s).toMatchObject({ basis: "none", fullCatalogTokens: 0, searches: 2, savedTotal: 0 });
   });
 
   it("uses tool definitions when present", () => {

@@ -98,8 +98,6 @@ export interface TracePayloads {
     promoted: number;
     dropped: number;
   };
-  /** Written by ratel-local, not core: estimated tokens of one upstream's tool definitions. */
-  ratel_tool_payload: { server: string; tool_count: number; estimated_tokens: number };
 }
 
 export type KnownEventType = keyof TracePayloads;
@@ -161,7 +159,6 @@ const KNOWN_TYPES: ReadonlySet<string> = new Set<KnownEventType>([
   "usage_cluster_policy_changed",
   "usage_model_mismatch",
   "usage_boost",
-  "ratel_tool_payload",
 ]);
 
 const ENVELOPE_KEYS = new Set([

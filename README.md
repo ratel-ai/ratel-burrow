@@ -18,17 +18,8 @@ the intent graph — and renders them in your browser. It never changes your Rat
 
 ## Quickstart
 
-### Using ratel-local
-
-Nothing to configure. From your project folder:
-
-```bash
-npx @ratel-ai/burrow        # or: pip install ratel-burrow && ratel-burrow
-```
-
-### Using the Ratel SDK
-
-Point Ratel's own trace sink at a Burrow dir (`./.ratel/burrow`), then run Burrow there.
+Burrow is for the open-source Ratel SDK (TypeScript and Python). Point Ratel's own trace sink
+at a Burrow dir (`./.ratel/burrow`), then run Burrow there.
 
 ```ts
 import { ratel } from "@ratel-ai/sdk";
@@ -53,7 +44,7 @@ npx @ratel-ai/burrow        # or: ratel-burrow
 ```
 
 Flags: `--dir <path>`, `--trace <file|dir>`, `--intent-graph <file>`, `--catalog <file>`,
-`--all-projects`, `--port <n>`, `--no-open`. Any path flag replaces the defaults.
+`--port <n>`, `--no-open`. Any path flag replaces the default `./.ratel/burrow`.
 
 Want to see every screen with data first? Run the example agent:
 `pnpm --filter @ratel-ai/burrow-example-ts-sdk start`, then `ratel-burrow` in `examples/ts-sdk`.

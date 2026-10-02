@@ -18,26 +18,17 @@ export interface Source {
 
 export interface DiscoveryOptions {
   cwd: string;
-  home: string;
-  env: Record<string, string | undefined>;
   /** Burrow dirs (`traces/`, `intent-graph.json`, `catalog-snapshot.json`). */
   dirs?: string[];
   /** Trace files or dirs of `*.jsonl`. */
   traces?: string[];
   intentGraphs?: string[];
   catalogs?: string[];
-  /** Read every ratel-local project, not just the cwd's. */
-  allProjects?: boolean;
 }
 
 export const BURROW_DIR = join(".ratel", "burrow");
 export const INTENT_GRAPH_FILE = "intent-graph.json";
 export const CATALOG_SNAPSHOT_FILE = "catalog-snapshot.json";
-
-/** ratel-local's per-project folder name: the path with every `/` and `.` replaced by `-`. */
-export function projectSlug(path: string): string {
-  return path.replace(/[/.\\:]/g, "-");
-}
 
 export function sourceId(path: string): string {
   return createHash("sha256").update(path).digest("hex").slice(0, 12);
@@ -67,7 +58,7 @@ function jsonlIn(dir: string): string[] {
 }
 
 export function discoverSources(options: DiscoveryOptions): Source[] {
-  const { cwd, home, env } = options;
+  const { cwd } = options;
   const out: Source[] = [];
   const seen = new Set<string>();
   const add = (kind: SourceKind, path: string, label: string) => {
@@ -100,16 +91,6 @@ export function discoverSources(options: DiscoveryOptions): Source[] {
       (options.catalogs?.length ?? 0) >
     0;
 
-  if (!explicit || options.allProjects) {
-    const root = env.RATEL_TELEMETRY_DIR || join(home, ".ratel", "telemetry");
-    const projects = options.allProjects ? list(root) : [projectSlug(resolve(cwd))];
-    for (const project of projects) {
-      for (const p of jsonlIn(join(root, project))) {
-        const name = p.slice(join(root, project).length + 1);
-        add("trace", p, `ratel-local · ${options.allProjects ? `${project}/${name}` : name}`);
-      }
-    }
-  }
   if (!explicit) addBurrowDir(BURROW_DIR);
 
   for (const dir of options.dirs ?? []) addBurrowDir(dir);

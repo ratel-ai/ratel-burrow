@@ -2,7 +2,6 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HELP, parseCliArgs } from "./args.js";
@@ -53,13 +52,10 @@ async function main() {
   const discover = () =>
     discoverSources({
       cwd: process.cwd(),
-      home: homedir(),
-      env: process.env,
       dirs: command.dirs,
       traces: command.traces,
       intentGraphs: command.intentGraphs,
       catalogs: command.catalogs,
-      allProjects: command.allProjects,
     });
   const token = randomBytes(24).toString("base64url");
   let server: Awaited<ReturnType<typeof startServer>>;
@@ -80,10 +76,8 @@ async function main() {
   console.log(`\n  Ratel Burrow ${version()} — read-only\n`);
   console.log(`  ${server.url}\n`);
   if (sources.length === 0) {
-    console.log("  No Ratel data found yet. Burrow looked in:");
-    console.log("    ~/.ratel/telemetry/<this folder>/   (ratel-local)");
-    console.log("    ./.ratel/burrow/                     (burrowConfig() in your agent)");
-    console.log("  It keeps looking; files that appear later show up on refresh.\n");
+    console.log("  No Ratel data in ./.ratel/burrow yet. Add burrowConfig() to your Ratel");
+    console.log("  config (or pass --trace / --dir); new files show up on refresh.\n");
   } else {
     const count = (k: string) => sources.filter((s) => s.kind === k).length;
     console.log(

@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
-import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -32,11 +31,6 @@ class Source:
         return asdict(self)
 
 
-def project_slug(path: str) -> str:
-    """ratel-local's per-project folder name: every `/`, `.`, `\\` and `:` becomes `-`."""
-    return re.sub(r"[/.\\:]", "-", path)
-
-
 def source_id(path: str) -> str:
     return hashlib.sha256(path.encode()).hexdigest()[:12]
 
@@ -55,16 +49,12 @@ def _jsonl_in(d: Path) -> list[Path]:
 def discover_sources(
     *,
     cwd: Path | str,
-    home: Path | str,
-    env: Mapping[str, str],
     dirs: Sequence[str] = (),
     traces: Sequence[str] = (),
     intent_graphs: Sequence[str] = (),
     catalogs: Sequence[str] = (),
-    all_projects: bool = False,
 ) -> list[Source]:
     cwd = Path(cwd).resolve()
-    home = Path(home)
     out: list[Source] = []
     seen: set[str] = set()
 
@@ -92,13 +82,6 @@ def discover_sources(
 
     explicit = bool(dirs or traces or intent_graphs or catalogs)
 
-    if not explicit or all_projects:
-        root = Path(env.get("RATEL_TELEMETRY_DIR") or home / ".ratel" / "telemetry")
-        projects = _list(root) if all_projects else [project_slug(str(cwd))]
-        for project in projects:
-            for p in _jsonl_in(root / project):
-                label = f"{project}/{p.name}" if all_projects else p.name
-                add("trace", p, f"ratel-local · {label}")
     if not explicit:
         add_burrow_dir(BURROW_DIR)
 

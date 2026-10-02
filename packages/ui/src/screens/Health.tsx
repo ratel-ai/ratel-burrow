@@ -69,7 +69,7 @@ export function HealthScreen() {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="MCP servers" hint="Upstreams ratel-local or registerMcpServer connected to.">
+        <Card title="MCP servers" hint="Upstreams connected with registerMcpServer.">
           {health.servers.length === 0 ? (
             <p className="text-sm text-warm-muted">No MCP upstreams recorded.</p>
           ) : (
@@ -98,9 +98,7 @@ export function HealthScreen() {
           hint={
             savings.basis === "definitions"
               ? "From your tool definitions: tokens ≈ characters ÷ 4 of name, description and input schema."
-              : savings.basis === "payload"
-                ? "From ratel-local's per-server estimate of tool definition size."
-                : "Burrow needs tool definitions or ratel-local's payload estimate to size the catalog."
+              : "Burrow needs tool definitions to size the catalog."
           }
         >
           {savings.basis === "none" ? (

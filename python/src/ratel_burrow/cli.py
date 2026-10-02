@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import secrets
 import signal
 import sys
@@ -18,8 +17,8 @@ UI_DIR = Path(__file__).parent / "ui"
 
 DESCRIPTION = """a read-only window into Ratel.
 
-With no options, Burrow reads ratel-local's telemetry for this folder
-(~/.ratel/telemetry/<project>/) and ./.ratel/burrow (see burrow_config()).
+With no options, Burrow reads ./.ratel/burrow: point your Ratel SDK at it
+with burrow_config() (Python) or burrowConfig() (TypeScript).
 Any of --dir/--trace/--intent-graph/--catalog replaces the defaults.
 Burrow binds 127.0.0.1 only and never writes anything."""
 
@@ -62,11 +61,6 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         metavar="FILE",
         help="a saved catalog.snapshot() JSON",
     )
-    p.add_argument(
-        "--all-projects",
-        action="store_true",
-        help="read every ratel-local project, not just this folder's",
-    )
     p.add_argument("--port", type=int, default=0, help="bind this port (default: a free one)")
     p.add_argument(
         "--no-open",
@@ -90,13 +84,10 @@ def main(argv: list[str] | None = None) -> int:
     def discover() -> list[Source]:
         return discover_sources(
             cwd=Path.cwd(),
-            home=Path.home(),
-            env=os.environ,
             dirs=args.dirs,
             traces=args.traces,
             intent_graphs=args.intent_graphs,
             catalogs=args.catalogs,
-            all_projects=args.all_projects,
         )
 
     token = secrets.token_urlsafe(24)
@@ -109,10 +100,8 @@ def main(argv: list[str] | None = None) -> int:
     sources = discover()
     print(f"\n  Ratel Burrow {__version__} — read-only\n\n  {server.url}\n")
     if not sources:
-        print("  No Ratel data found yet. Burrow looked in:")
-        print("    ~/.ratel/telemetry/<this folder>/   (ratel-local)")
-        print("    ./.ratel/burrow/                     (burrow_config() in your agent)")
-        print("  It keeps looking; files that appear later show up on refresh.\n")
+        print("  No Ratel data in ./.ratel/burrow yet. Add burrow_config() to your Ratel")
+        print("  catalogs (or pass --trace / --dir); new files show up on refresh.\n")
     else:
 
         def count(k: str) -> int:

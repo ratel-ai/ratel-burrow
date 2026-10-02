@@ -9,7 +9,6 @@ describe("parseCliArgs", () => {
       traces: [],
       intentGraphs: [],
       catalogs: [],
-      allProjects: false,
       open: true,
       port: 0,
     });
@@ -27,7 +26,6 @@ describe("parseCliArgs", () => {
       "c.json",
       "--dir",
       "d",
-      "--all-projects",
       "--no-open",
       "--port",
       "4377",
@@ -37,7 +35,6 @@ describe("parseCliArgs", () => {
       intentGraphs: ["g.json"],
       catalogs: ["c.json"],
       dirs: ["d"],
-      allProjects: true,
       open: false,
       port: 4377,
     });
@@ -48,5 +45,6 @@ describe("parseCliArgs", () => {
     expect(parseCliArgs(["-v"])).toEqual({ kind: "version" });
     expect(parseCliArgs(["--port", "abc"])).toMatchObject({ kind: "error" });
     expect(parseCliArgs(["--nope"])).toMatchObject({ kind: "error" });
+    expect(parseCliArgs(["--all-projects"])).toMatchObject({ kind: "error" });
   });
 });
