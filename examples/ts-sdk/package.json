@@ -1,0 +1,17 @@
+{
+  "name": "@ratel-ai/burrow-example-ts-sdk",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types src/agent.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ratel-ai/burrow": "workspace:*",
+    "@ratel-ai/sdk": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
