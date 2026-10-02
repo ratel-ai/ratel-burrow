@@ -23,6 +23,7 @@ const r = ratel({ ...config, ...burrowConfig() }); // JSONL traces + catalog def
 | `src/discovery.ts` | finds trace files, intent graphs and catalog snapshots ([ADR 0003](../../docs/adr/0003-data-sources-and-discovery.md)) |
 | `src/server.ts` | the read-only HTTP contract ([ADR 0002](../../docs/adr/0002-read-only-viewer-browser-side-parsing.md)) |
 | `src/config.ts` | `burrowConfig()` / `burrowPaths()` |
+| `src/replay.ts` | the Boost replay with the project's `@ratel-ai/sdk` ([ADR 0005](../../docs/adr/0005-boost-replay-in-launchers.md)) |
 | `scripts/copy-ui.mjs` | copies `packages/ui/dist` into `dist/ui` at build time |
 
 ```bash

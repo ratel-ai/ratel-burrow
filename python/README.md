@@ -26,6 +26,7 @@ catalog.experimental_enable_catalog_definitions()  # descriptions + schemas for 
 | `src/ratel_burrow/discovery.py` | finds trace files, intent graphs and catalog snapshots |
 | `src/ratel_burrow/server.py` | the read-only HTTP server |
 | `src/ratel_burrow/config.py` | `burrow_config()` / `burrow_paths()` |
+| `src/ratel_burrow/replay.py` | the Boost replay with the installed `ratel-ai` ([ADR 0005](../docs/adr/0005-boost-replay-in-launchers.md)) |
 | `src/ratel_burrow/ui/` | the built UI, copied in by `scripts/bundle_ui.py` (git-ignored) |
 
 ## Develop

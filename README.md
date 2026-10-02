@@ -44,7 +44,11 @@ npx @ratel-ai/burrow        # or: ratel-burrow
 ```
 
 Flags: `--dir <path>`, `--trace <file|dir>`, `--intent-graph <file>`, `--catalog <file>`,
-`--port <n>`, `--no-open`. Any path flag replaces the default `./.ratel/burrow`.
+`--port <n>`, `--no-open`, `--no-replay`. Any path flag replaces the default `./.ratel/burrow`.
+
+With the Ratel SDK installed in the project, Burrow replays your searches with it (read-only)
+so the Boost panel can compare ranking with and without the intent graph on every turn, as
+Ratel Cloud does.
 
 Want to see every screen with data first? Run the example agent:
 `pnpm --filter @ratel-ai/burrow-example-ts-sdk start`, then `ratel-burrow` in `examples/ts-sdk`.

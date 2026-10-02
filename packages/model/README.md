@@ -12,7 +12,7 @@ the browser (the UI bundles it) and in tests.
 | `src/health.ts` | `buildHealth`: latency, errors, MCP servers, auth, embedders, dropped events |
 | `src/savings.ts` | `estimateSavings`: estimated tokens saved vs. sending the full catalog |
 | `src/adaptive.ts` | `buildBoostStats`: match rate and promotions (Overview) |
-| `src/boost/` | Ratel Cloud's Boost view (ported), `buildBoostFromTrace` from `base_hits`, boost attachment ([ADR 0004](../../docs/adr/0004-adaptive-ranking-mirrors-cloud.md)) |
+| `src/boost/` | Ratel Cloud's Boost view (ported), `buildBoostFromTrace` from `base_hits` and the launcher's replay, boost attachment ([ADR 0004](../../docs/adr/0004-adaptive-ranking-mirrors-cloud.md), [ADR 0005](../../docs/adr/0005-boost-replay-in-launchers.md)) |
 | `src/graph-state.ts` | `buildRankingState`: live / learning online / built offline, from `usage_ranking_status` |
 | `src/tail.ts` | `TraceTail`: incremental, byte-accurate reader for growing trace files |
 | `src/intent-graph/` | intent-graph wire types + view models ported from Ratel Cloud |

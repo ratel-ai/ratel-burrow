@@ -4,7 +4,8 @@ Date: 2026-10-02
 
 ## Status
 
-Accepted
+Accepted. Amended by [ADR 0005](0005-boost-replay-in-launchers.md): besides `base_hits`, the
+Boost panel uses the launcher's replay, Cloud's other path, so every turn has both arms.
 
 ## Context
 

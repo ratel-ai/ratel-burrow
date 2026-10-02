@@ -4,7 +4,8 @@ Date: 2026-10-02
 
 ## Status
 
-Accepted
+Accepted. Amended by [ADR 0005](0005-boost-replay-in-launchers.md): a launcher may also serve one
+derived, read-only source, the Boost replay.
 
 ## Context
 
