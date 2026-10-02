@@ -88,3 +88,12 @@ describe("intent graph view models", () => {
     expect(modelLabel(null)).toBe("lexical");
   });
 });
+
+describe("pageOfIndex", () => {
+  it("maps a row index to its 1-based page of 25", async () => {
+    const { pageOfIndex } = await import("../src/intent-graph");
+    expect([pageOfIndex(-1), pageOfIndex(0), pageOfIndex(24), pageOfIndex(25)]).toEqual([
+      1, 1, 1, 2,
+    ]);
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBoostSelections } from "../src/boost/selections";
+import { buildBoostFromTrace, buildBoostSelections } from "../src/boost/selections";
 import { buildBoostView } from "../src/boost/view";
 import { isEvent, parseTraceLog } from "../src/events";
 import { buildRankingState } from "../src/graph-state";
@@ -90,5 +90,56 @@ describe("buildRankingState", () => {
       liveSince: null,
       boostingSince: 1790000003001,
     });
+  });
+});
+
+describe("Boost from an SDK without base_hits (rc.10)", () => {
+  // As 0.13.0-rc.10 writes it: usage_boost just before its search, no turn_id on the boost,
+  // no base_hits, no usage_ranking_status.
+  const rc10 = () =>
+    parseTraceLog(
+      [
+        '{"v":2,"ts":10,"session_id":"s","type":"usage_boost","intent":null,"similarity":0,"support":0,"promoted":0,"dropped":0}',
+        '{"v":2,"ts":11,"session_id":"s","turn_id":"turn-1","type":"search","query":"q1","origin":"direct","top_k":3,"hits":[{"tool_id":"a","score":2},{"tool_id":"b","score":1}],"stages":[],"took_ms":1}',
+        '{"v":2,"ts":12,"session_id":"s","turn_id":"turn-1","type":"invoke_start","tool_id":"b","args_size_bytes":2}',
+        '{"v":2,"ts":20,"session_id":"s","type":"usage_boost","intent":"c1","similarity":1,"support":1,"promoted":1,"dropped":0}',
+        '{"v":2,"ts":21,"session_id":"s","turn_id":"turn-2","type":"search","query":"q2","origin":"direct","top_k":3,"hits":[{"tool_id":"b","score":2},{"tool_id":"a","score":1}],"stages":[],"took_ms":1}',
+        '{"v":2,"ts":22,"session_id":"s","turn_id":"turn-2","type":"invoke_start","tool_id":"b","args_size_bytes":2}',
+      ].join("\n"),
+    ).events;
+
+  it("attaches a boost written before its search to that search", () => {
+    expect(buildBoostSelections(rc10()).map((s) => s.arms.map((a) => a.arm))).toEqual([
+      ["adaptive"],
+      ["adaptive"],
+    ]);
+  });
+
+  it("gives a boost to the search after it, even when the previous search is closer in time", () => {
+    const events = parseTraceLog(
+      [
+        '{"v":2,"ts":100,"session_id":"s","turn_id":"turn-1","type":"search","query":"q1","origin":"direct","top_k":3,"hits":[{"tool_id":"a","score":2}],"stages":[],"took_ms":1}',
+        '{"v":2,"ts":101,"session_id":"s","turn_id":"turn-1","type":"invoke_start","tool_id":"a","args_size_bytes":2}',
+        '{"v":2,"ts":102,"session_id":"s","type":"usage_boost","intent":null,"similarity":0,"support":0,"promoted":0,"dropped":0}',
+        '{"v":2,"ts":110,"session_id":"s","turn_id":"turn-2","type":"search","query":"q2","origin":"direct","top_k":3,"hits":[{"tool_id":"a","score":2}],"stages":[],"took_ms":1}',
+        '{"v":2,"ts":111,"session_id":"s","turn_id":"turn-2","type":"invoke_start","tool_id":"a","args_size_bytes":2}',
+      ].join("\n"),
+    ).events;
+    expect(buildBoostSelections(events).map((s) => s.arms[0]?.arm)).toEqual([
+      "baseline",
+      "adaptive",
+    ]);
+  });
+
+  it("does not invent a baseline: the view is adaptive-only, scored on the invoked tool", () => {
+    const view = buildBoostFromTrace(rc10());
+    expect(view.reference).toMatchObject({ arm: null, kind: "none" });
+    expect(view.turns.map((t) => t.rank.adaptive)).toEqual([2, 1]);
+    expect(view.empty).toBe(false);
+  });
+
+  it("uses base_hits as the baseline once the runtime reports them", () => {
+    const view = buildBoostFromTrace(events());
+    expect(view.reference).toMatchObject({ arm: "baseline", scored: true });
   });
 });

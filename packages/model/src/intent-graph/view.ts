@@ -10,6 +10,18 @@ import type { IntentGraphDocument, IntentGraphEdgeKind } from "./wire.js";
 export const SUPPORT_FULL = 3;
 /** Clusters drawn in the force graph; the table still lists every cluster. */
 export const MAX_DRAWN_CLUSTERS = 400;
+/** Cluster cap per graph (Ratel Cloud's `MAX_INTENT_GRAPH_CLUSTERS`). */
+export const MAX_INTENT_GRAPH_CLUSTERS = 5_000;
+/** Stored-size cap per graph (Ratel Cloud's `MAX_INTENT_GRAPH_BYTES`). */
+export const MAX_INTENT_GRAPH_BYTES = 4_000_000;
+/** Rows per page in the cluster table. */
+export const CLUSTER_PAGE_SIZE = 25;
+
+/** One-based page that holds `index`, or 1 for an unknown row. */
+export function pageOfIndex(index: number, pageSize: number = CLUSTER_PAGE_SIZE): number {
+  return index < 0 ? 1 : Math.floor(index / pageSize) + 1;
+}
+
 /** Members shown inline per cluster. */
 export const MEMBERS_SHOWN = 5;
 /** Pseudo-count in the runtime's passed-over damper (the core's IMPRESSION_PRIOR). */

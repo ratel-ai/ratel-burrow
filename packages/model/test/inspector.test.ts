@@ -37,6 +37,18 @@ describe("buildInspector", () => {
     expect(buildInspector(events)[0]?.searches[0]?.boost).toMatchObject({ intent: "i" });
   });
 
+  it("attaches a turn-less boost to the search written after it", () => {
+    const events = parseTraceLog(
+      [
+        '{"v":2,"ts":100,"session_id":"s","type":"search","query":"q1","origin":"direct","top_k":1,"hits":[],"stages":[],"took_ms":1}',
+        '{"v":2,"ts":102,"session_id":"s","type":"usage_boost","intent":"i2","similarity":1,"support":1,"promoted":1,"dropped":0}',
+        '{"v":2,"ts":110,"session_id":"s","type":"search","query":"q2","origin":"direct","top_k":1,"hits":[],"stages":[],"took_ms":1}',
+      ].join("\n"),
+    ).events;
+    const searches = buildInspector(events)[0]?.searches ?? [];
+    expect(searches.map((s) => s.boost?.intent ?? null)).toEqual([null, "i2"]);
+  });
+
   it("links skill loads to skill searches", () => {
     const [s2] = buildInspector(v2Events());
     const skill = s2?.searches.find((s) => s.kind === "skill");

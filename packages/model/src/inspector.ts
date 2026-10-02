@@ -1,3 +1,4 @@
+import { attachBoosts } from "./boost/attach.js";
 import { type EventOf, isEvent, type Origin, type SearchStage, type TraceEvent } from "./events.js";
 import { collectInvocations, type Invocation } from "./invocations.js";
 
@@ -51,9 +52,6 @@ export interface SessionTimeline {
   stats: SessionStats;
 }
 
-/** A `usage_boost` belongs to the tool or skill search it ran inside: same session, this close in time. */
-const BOOST_WINDOW_MS = 1_000;
-
 function searchRecord(e: TraceEvent, index: number): SearchRecord | null {
   const common = {
     key: `${e.sessionId}:${index}`,
@@ -106,6 +104,7 @@ export function buildInspector(events: readonly TraceEvent[]): SessionTimeline[]
     else bySession.set(e.sessionId, [e]);
   }
   const calls = collectInvocations(events);
+  const boosts = attachBoosts(events);
 
   const sessions: SessionTimeline[] = [];
   for (const [sessionId, list] of bySession) {
@@ -114,29 +113,19 @@ export function buildInspector(events: readonly TraceEvent[]): SessionTimeline[]
     list.forEach((e, i) => {
       if (e.type === "gateway_search" && hasCoreSearch) return;
       const record = searchRecord(e, i);
-      if (record) searches.push(record);
-    });
-
-    const rankedSearches = searches.filter((s) => s.kind !== "fact");
-    for (const e of list) {
-      if (!isEvent(e, "usage_boost")) continue;
-      let best: SearchRecord | undefined;
-      for (const s of rankedSearches) {
-        const sameTurn = !e.turnId || !s.turnId || e.turnId === s.turnId;
-        const dt = Math.abs(s.ts - e.ts);
-        if (!sameTurn || dt > BOOST_WINDOW_MS || s.boost) continue;
-        if (!best || dt < Math.abs(best.ts - e.ts)) best = s;
-      }
-      if (best) {
-        best.boost = {
-          intent: e.intent,
-          similarity: e.similarity,
-          support: e.support,
-          promoted: e.promoted,
-          dropped: e.dropped,
+      if (!record) return;
+      const boost = (isEvent(e, "search") || isEvent(e, "skill_search")) && boosts.get(e);
+      if (boost) {
+        record.boost = {
+          intent: boost.intent,
+          similarity: boost.similarity,
+          support: boost.support,
+          promoted: boost.promoted,
+          dropped: boost.dropped,
         };
       }
-    }
+      searches.push(record);
+    });
 
     const orphans: LinkedInvocation[] = [];
     for (const call of calls) {

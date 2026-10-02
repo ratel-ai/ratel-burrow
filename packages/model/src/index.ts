@@ -1,4 +1,5 @@
 export * from "./adaptive.js";
+export * from "./boost/attach.js";
 export * from "./boost/ground-truth.js";
 export * from "./boost/metrics.js";
 export * from "./boost/selections.js";
