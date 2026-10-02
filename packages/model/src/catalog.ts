@@ -137,7 +137,11 @@ export function buildCatalog(
       e.contentHash = ev.content_hash;
       e.removed = false;
       seen(e, ev.ts);
-    } else if (isEvent(ev, "index_churn") || isEvent(ev, "skill_churn") || isEvent(ev, "fact_churn")) {
+    } else if (
+      isEvent(ev, "index_churn") ||
+      isEvent(ev, "skill_churn") ||
+      isEvent(ev, "fact_churn")
+    ) {
       const [kind, id] =
         ev.type === "index_churn"
           ? (["tool", ev.tool_id] as const)

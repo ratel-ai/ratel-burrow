@@ -40,7 +40,10 @@ function catalogSize(events: readonly TraceEvent[], catalog: Catalog) {
   const perServer = new Map<string, { tokens: number; count: number }>();
   for (const e of events) {
     if (isEvent(e, "upstream_register") && !perServer.has(e.server)) {
-      perServer.set(e.server, { tokens: e.tool_count * TOKENS_PER_TOOL_FALLBACK, count: e.tool_count });
+      perServer.set(e.server, {
+        tokens: e.tool_count * TOKENS_PER_TOOL_FALLBACK,
+        count: e.tool_count,
+      });
     } else if (isEvent(e, "ratel_tool_payload")) {
       perServer.set(e.server, { tokens: e.estimated_tokens, count: e.tool_count });
     }
@@ -57,7 +60,9 @@ function catalogSize(events: readonly TraceEvent[], catalog: Catalog) {
 
 export function estimateSavings(events: readonly TraceEvent[], catalog: Catalog): SavingsEstimate {
   const size = catalogSize(events, catalog);
-  const coreSearchSessions = new Set(events.filter((e) => e.type === "search").map((e) => e.sessionId));
+  const coreSearchSessions = new Set(
+    events.filter((e) => e.type === "search").map((e) => e.sessionId),
+  );
   const searches: { ts: number; returned: number }[] = [];
   for (const e of events) {
     if (isEvent(e, "search")) searches.push({ ts: e.ts, returned: e.hits.length });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildCatalog } from "../src/catalog";
-import { estimateTokens, estimateSavings } from "../src/savings";
+import { estimateSavings, estimateTokens } from "../src/savings";
 import { v1Events, v2Events } from "./helpers";
 
 describe("estimateTokens", () => {

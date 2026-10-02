@@ -11,7 +11,9 @@ describe("buildInspector", () => {
 
   it("links each call to the latest preceding search and records its rank", () => {
     const [s2] = buildInspector(v2Events());
-    const refund = s2?.searches.find((s) => s.query === "refund the last order" && s.kind === "tool");
+    const refund = s2?.searches.find(
+      (s) => s.query === "refund the last order" && s.kind === "tool",
+    );
     expect(refund?.hits.map((h) => h.id)).toEqual(["send_email", "stripe_refund"]);
     expect(refund?.stages.map((st) => st.name)).toEqual(["bm25", "dense", "rrf"]);
     expect(refund?.boost).toMatchObject({ intent: "c1", promoted: 1 });
@@ -37,18 +39,32 @@ describe("buildInspector", () => {
       ["filesystem__list_directory", 1],
       ["filesystem.list_directory", null],
     ]);
-    expect(s1?.stats).toMatchObject({ searches: 2, invocations: 2, errors: 1, notRetrieved: 1, emptySearches: 1 });
+    expect(s1?.stats).toMatchObject({
+      searches: 2,
+      invocations: 2,
+      errors: 1,
+      notRetrieved: 1,
+      emptySearches: 1,
+    });
   });
 
   it("uses gateway_search when it is the only search record", () => {
     const events = v1Events().filter((e) => e.type !== "search");
     const [s1] = buildInspector(events);
-    expect(s1?.searches[0]).toMatchObject({ query: "list files in a folder", hitCount: 2, hits: [] });
+    expect(s1?.searches[0]).toMatchObject({
+      query: "list files in a folder",
+      hitCount: 2,
+      hits: [],
+    });
   });
 
   it("puts calls before any search in `orphans`", () => {
     const events = v2Events().filter((e) => e.type !== "search" && e.type !== "skill_search");
     const [s2] = buildInspector(events);
-    expect(s2?.orphans.map((c) => c.id)).toEqual(["stripe_refund", "refund_playbook", "crm_lookup"]);
+    expect(s2?.orphans.map((c) => c.id)).toEqual([
+      "stripe_refund",
+      "refund_playbook",
+      "crm_lookup",
+    ]);
   });
 });

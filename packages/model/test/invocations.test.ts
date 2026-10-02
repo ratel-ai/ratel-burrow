@@ -35,6 +35,8 @@ describe("collectInvocations", () => {
     const calls = collectInvocations(
       v1Events().filter((e) => !e.type.startsWith("invoke_")),
     ).filter((c) => c.error === null);
-    expect(calls).toEqual([expect.objectContaining({ id: "filesystem__list_directory", tookMs: 612 })]);
+    expect(calls).toEqual([
+      expect.objectContaining({ id: "filesystem__list_directory", tookMs: 612 }),
+    ]);
   });
 });

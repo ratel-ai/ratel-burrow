@@ -51,7 +51,11 @@ describe("buildCatalog", () => {
       skills: [{ id: "k", name: "k", description: "sk", tags: ["x"] }],
     });
     expect(catalog.hasDefinitions).toBe(true);
-    expect(catalog.tools[0]).toMatchObject({ id: "t", defined: true, inputSchema: { type: "object" } });
+    expect(catalog.tools[0]).toMatchObject({
+      id: "t",
+      defined: true,
+      inputSchema: { type: "object" },
+    });
     expect(catalog.skills[0]).toMatchObject({ id: "k", tags: ["x"] });
   });
 });

@@ -59,7 +59,17 @@ export function buildBoostStats(events: readonly TraceEvent[]): BoostStats {
   const times = [...boosts.map((e) => e.ts), ...searches.map((s) => s.ts)];
   if (times.length > 0) {
     const width = bucketWidth(Math.min(...times), Math.max(...times));
-    const buckets = new Map<number, { boosts: number; matched: number; promoted: number; ranks: number[]; calls: number; misses: number }>();
+    const buckets = new Map<
+      number,
+      {
+        boosts: number;
+        matched: number;
+        promoted: number;
+        ranks: number[];
+        calls: number;
+        misses: number;
+      }
+    >();
     const bucket = (ts: number) => {
       const start = Math.floor(ts / width) * width;
       let b = buckets.get(start);

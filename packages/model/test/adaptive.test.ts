@@ -18,8 +18,6 @@ describe("buildBoostStats", () => {
     const log = parseTraceLog(
       '{"v":2,"ts":1,"session_id":"s","type":"usage_model_mismatch","built":"a","active":"b","dim_mismatch":true}',
     );
-    expect(buildBoostStats(log.events).warnings).toEqual([
-      expect.stringContaining("built with a"),
-    ]);
+    expect(buildBoostStats(log.events).warnings).toEqual([expect.stringContaining("built with a")]);
   });
 });

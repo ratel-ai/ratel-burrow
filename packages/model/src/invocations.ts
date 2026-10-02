@@ -90,7 +90,14 @@ export function collectInvocations(events: readonly TraceEvent[]): Invocation[] 
         tool(e, e.tool_id, null, e.error || "error");
       }
     } else if (isEvent(e, "skill_invoke")) {
-      out.push({ kind: "skill", id: e.skill_id, ts: e.ts - e.took_ms, ...base(e), tookMs: e.took_ms, error: null });
+      out.push({
+        kind: "skill",
+        id: e.skill_id,
+        ts: e.ts - e.took_ms,
+        ...base(e),
+        tookMs: e.took_ms,
+        error: null,
+      });
     }
   }
   return out.sort((a, b) => a.ts - b.ts);

@@ -90,7 +90,15 @@ export function buildHealth(events: readonly TraceEvent[]): Health {
     } else if (isEvent(e, "upstream_register")) {
       const prev = servers.get(e.server);
       servers.set(e.server, {
-        ...(prev ?? { calls: 0, errors: 0, auth: "ok" as AuthState, count: 0, p50: null, p95: null, max: null }),
+        ...(prev ?? {
+          calls: 0,
+          errors: 0,
+          auth: "ok" as AuthState,
+          count: 0,
+          p50: null,
+          p95: null,
+          max: null,
+        }),
         server: e.server,
         transport: transportLabel(e.transport),
         toolCount: e.tool_count,
@@ -140,10 +148,27 @@ export function buildHealth(events: readonly TraceEvent[]): Health {
     warnings.add(`${dropped.total} trace events were dropped; numbers here undercount.`);
   }
 
-  const byTool = new Map<string, { kind: "tool" | "skill"; id: string; times: number[]; calls: number; errors: number; lastError: string | null }>();
+  const byTool = new Map<
+    string,
+    {
+      kind: "tool" | "skill";
+      id: string;
+      times: number[];
+      calls: number;
+      errors: number;
+      lastError: string | null;
+    }
+  >();
   for (const c of calls) {
     const key = `${c.kind}:${c.id}`;
-    const t = byTool.get(key) ?? { kind: c.kind, id: c.id, times: [], calls: 0, errors: 0, lastError: null };
+    const t = byTool.get(key) ?? {
+      kind: c.kind,
+      id: c.id,
+      times: [],
+      calls: 0,
+      errors: 0,
+      lastError: null,
+    };
     t.calls += 1;
     if (c.tookMs !== null) t.times.push(c.tookMs);
     if (c.error !== null) {

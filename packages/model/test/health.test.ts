@@ -33,7 +33,10 @@ describe("buildHealth", () => {
         '{"v":1,"ts":2,"session_id":"s","type":"auth_needs","upstream":"gh"}',
       ].join("\n"),
     );
-    expect(buildHealth(log.events).servers[0]).toMatchObject({ transport: "http", auth: "needs_auth" });
+    expect(buildHealth(log.events).servers[0]).toMatchObject({
+      transport: "http",
+      auth: "needs_auth",
+    });
   });
 
   it("reports embedder status, dropped events and warnings", () => {

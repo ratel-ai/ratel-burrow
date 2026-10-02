@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { parseTraceLine, parseTraceLog } from "../src/events";
+import { isEvent, parseTraceLine, parseTraceLog } from "../src/events";
 
 const fixture = (name: string) =>
   readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
@@ -11,7 +11,7 @@ describe("parseTraceLine", () => {
       '{"v":1,"ts":5,"session_id":"s","type":"search","query":"q","origin":"agent","top_k":2,"hits":[{"tool_id":"a","score":1}],"stages":[],"took_ms":1}',
     );
     expect(e).toMatchObject({ v: 1, ts: 5, sessionId: "s", type: "search", query: "q" });
-    expect(e?.type === "search" && e.hits[0]?.tool_id).toBe("a");
+    expect(e && isEvent(e, "search") && e.hits[0]?.tool_id).toBe("a");
   });
 
   it("lifts v2 envelope fields", () => {
@@ -28,7 +28,9 @@ describe("parseTraceLine", () => {
   });
 
   it("keeps unknown event types as raw, not errors", () => {
-    const e = parseTraceLine('{"v":2,"ts":1,"session_id":"s","type":"experiment_dispatch","arm":"a"}');
+    const e = parseTraceLine(
+      '{"v":2,"ts":1,"session_id":"s","type":"experiment_dispatch","arm":"a"}',
+    );
     expect(e).toMatchObject({ type: "experiment_dispatch", known: false });
     expect(e?.raw).toMatchObject({ arm: "a" });
   });
