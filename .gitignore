@@ -20,3 +20,6 @@ python/src/ratel_burrow/ui/
 .idea/
 .vscode/
 .DS_Store
+
+# Local packs (npm pack / pnpm pack)
+*.tgz
