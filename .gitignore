@@ -1,0 +1,22 @@
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+build/
+python/src/ratel_burrow/ui/
+
+# Local Burrow data written by examples
+.ratel/
+
+# Env / IDE / OS
+.env
+.env.*
+.idea/
+.vscode/
+.DS_Store
