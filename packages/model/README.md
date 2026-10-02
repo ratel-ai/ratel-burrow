@@ -11,7 +11,10 @@ the browser (the UI bundles it) and in tests.
 | `src/inspector.ts` | `buildInspector`: per-session searches with hits, stages, boosts and the calls they led to |
 | `src/health.ts` | `buildHealth`: latency, errors, MCP servers, auth, embedders, dropped events |
 | `src/savings.ts` | `estimateSavings`: estimated tokens saved vs. sending the full catalog |
-| `src/adaptive.ts` | `buildBoostStats`: is adaptive ranking matching and promoting? |
+| `src/adaptive.ts` | `buildBoostStats`: match rate and promotions (Overview) |
+| `src/boost/` | Ratel Cloud's Boost view (ported), `buildBoostFromTrace` from `base_hits`, boost attachment ([ADR 0004](../../docs/adr/0004-adaptive-ranking-mirrors-cloud.md)) |
+| `src/graph-state.ts` | `buildRankingState`: live / learning online / built offline, from `usage_ranking_status` |
+| `src/tail.ts` | `TraceTail`: incremental, byte-accurate reader for growing trace files |
 | `src/intent-graph/` | intent-graph wire types + view models ported from Ratel Cloud |
 | `src/format.ts`, `src/stats.ts` | display formatting and small numeric helpers |
 
