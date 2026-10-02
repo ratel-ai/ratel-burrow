@@ -1,0 +1,14 @@
+{
+  "name": "@ratel-ai/burrow-conformance",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@ratel-ai/burrow": "workspace:*",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.5"
+  }
+}
