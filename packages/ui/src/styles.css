@@ -9,6 +9,8 @@
 @theme {
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Cloud uses Acid Grotesk here; it is not redistributed, so Geist stands in. */
+  --font-display: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
 
   --color-canvas: #0a0e0c;
   --color-base-deep: #070a08;
