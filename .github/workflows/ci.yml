@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: uv venv --python 3.11 .venv
-      - run: uv pip install --python .venv -e '.[dev]'
+      - run: uv pip install --python .venv --prerelease allow -e '.[dev]' 'ratel-ai==0.13.0rc10'
       - run: .venv/bin/ruff check . && .venv/bin/ruff format --check .
       - run: .venv/bin/mypy src
       - run: .venv/bin/pytest
@@ -65,7 +65,7 @@ jobs:
       - run: |
           cd python
           uv venv --python 3.11 .venv
-          uv pip install --python .venv -e .
+          uv pip install --python .venv --prerelease allow -e . 'ratel-ai==0.13.0rc10'
           .venv/bin/python scripts/bundle_ui.py
       - run: pnpm --filter @ratel-ai/burrow-conformance test
 

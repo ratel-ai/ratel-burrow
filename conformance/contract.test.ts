@@ -39,6 +39,8 @@ const flags = [
   "--intent-graph",
   join(fixtures, "intent-graph.json"),
   "--no-open",
+  // The file contract; the Boost replay depends on an installed SDK and is checked on its own.
+  "--no-replay",
 ];
 
 function start(cmd: string, args: string[]): Promise<{ proc: ChildProcess; url: URL }> {
