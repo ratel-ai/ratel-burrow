@@ -48,7 +48,7 @@
     "@ratel-ai/burrow-model": "workspace:*"
   },
   "peerDependencies": {
-    "@ratel-ai/sdk": ">=0.12.0"
+    "@ratel-ai/sdk": ">=0.12.0 || >=0.13.0-rc.0"
   },
   "peerDependenciesMeta": {
     "@ratel-ai/sdk": {
