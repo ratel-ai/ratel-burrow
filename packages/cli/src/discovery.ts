@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
-export type SourceKind = "trace" | "intent_graph" | "catalog_snapshot";
+export type SourceKind = "trace" | "intent_graph" | "catalog_snapshot" | "boost_replay";
 
 /** One data file Burrow can serve (ADR 0002 / 0003). */
 export interface Source {

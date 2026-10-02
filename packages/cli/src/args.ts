@@ -7,6 +7,8 @@ export type CliCommand =
       traces: string[];
       intentGraphs: string[];
       catalogs: string[];
+      /** Replay searches for the Boost panel with the project's Ratel SDK (ADR 0005). */
+      replay: boolean;
       open: boolean;
       port: number;
     }
@@ -28,6 +30,8 @@ Options:
   --catalog <file>       a saved catalog.snapshot() JSON
   --port <n>             bind this port (default: a free one)
   --no-open              print the URL without opening a browser
+  --no-replay            don't replay searches for the Boost panel (it uses your
+                         project's @ratel-ai/sdk, read-only, when installed)
   -h, --help             show this help
   -v, --version          print the version
 
@@ -53,6 +57,7 @@ export function parseCliArgs(argv: string[]): CliCommand {
     traces: values.trace ?? [],
     intentGraphs: values["intent-graph"] ?? [],
     catalogs: values.catalog ?? [],
+    replay: !values["no-replay"],
     open: !values["no-open"],
     port,
   };
@@ -69,6 +74,7 @@ function parse(argv: string[]) {
       "intent-graph": { type: "string", multiple: true },
       catalog: { type: "string", multiple: true },
       "no-open": { type: "boolean" },
+      "no-replay": { type: "boolean" },
       port: { type: "string" },
       help: { type: "boolean", short: "h" },
       version: { type: "boolean", short: "v" },

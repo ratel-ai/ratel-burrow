@@ -13,10 +13,25 @@ import type { Source } from "./discovery.js";
 export interface ServerOptions {
   /** Called per request so files created after launch (new sessions) appear. */
   discover: () => Source[];
+  /**
+   * Sources the launcher computes from the files rather than serves raw (ADR 0005): today
+   * only the Boost replay. Listed while `describe()` returns a size/mtime, read on request.
+   */
+  derived?: DerivedSource[];
   uiDir: string;
   token: string;
   port?: number;
   host?: string;
+}
+
+export interface DerivedSource {
+  id: string;
+  kind: Source["kind"];
+  label: string;
+  /** Null hides it; size/mtime change whenever its inputs do, so the UI knows to refetch. */
+  describe: () => { size: number; mtime: number } | null;
+  /** The JSON body. */
+  read: () => Promise<string>;
 }
 
 export interface BurrowServer {
@@ -74,6 +89,26 @@ export function startServer(options: ServerOptions): Promise<BurrowServer> {
   const uiRoot = resolve(options.uiDir);
   let port = 0;
 
+  const listSources = () => {
+    const files = options.discover();
+    const derived = (options.derived ?? []).flatMap((d) => {
+      const described = d.describe();
+      return described
+        ? [
+            {
+              id: d.id,
+              kind: d.kind,
+              path: "",
+              label: d.label,
+              size: described.size,
+              mtime: described.mtime,
+            },
+          ]
+        : [];
+    });
+    return [...files, ...derived];
+  };
+
   const handler = (req: IncomingMessage, res: ServerResponse) => {
     for (const [k, v] of Object.entries(COMMON_HEADERS)) res.setHeader(k, v);
     if (req.method !== "GET" && req.method !== "HEAD") {
@@ -91,7 +126,16 @@ export function startServer(options: ServerOptions): Promise<BurrowServer> {
       const auth = req.headers.authorization ?? "";
       const given = auth.startsWith("Bearer ") ? auth.slice(7) : "";
       if (!safeEqual(given, options.token)) return json(res, 401, { error: "unauthorized" });
-      if (path === "/api/sources") return json(res, 200, { sources: options.discover() });
+      if (path === "/api/sources") return json(res, 200, { sources: listSources() });
+      const derived = options.derived?.find((d) => path === `/api/sources/${d.id}`);
+      if (derived) {
+        if (!derived.describe()) return json(res, 404, { error: "unavailable" });
+        derived.read().then(
+          (body) => send(res, 200, body, "application/json; charset=utf-8"),
+          (err: unknown) => json(res, 200, { error: (err as Error).message ?? String(err) }),
+        );
+        return;
+      }
       const match = /^\/api\/sources\/([a-f0-9]{1,64})$/.exec(path);
       if (match) {
         const source = options.discover().find((s) => s.id === match[1]);

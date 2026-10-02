@@ -9,6 +9,7 @@ describe("parseCliArgs", () => {
       traces: [],
       intentGraphs: [],
       catalogs: [],
+      replay: true,
       open: true,
       port: 0,
     });
@@ -27,6 +28,7 @@ describe("parseCliArgs", () => {
       "--dir",
       "d",
       "--no-open",
+      "--no-replay",
       "--port",
       "4377",
     ]);
@@ -36,6 +38,7 @@ describe("parseCliArgs", () => {
       catalogs: ["c.json"],
       dirs: ["d"],
       open: false,
+      replay: false,
       port: 4377,
     });
   });

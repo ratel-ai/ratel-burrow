@@ -2,11 +2,13 @@
 import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { HELP, parseCliArgs } from "./args.js";
-import { discoverSources } from "./discovery.js";
-import { startServer } from "./server.js";
+import { discoverSources, type Source } from "./discovery.js";
+import { computeReplay, loadSdk } from "./replay.js";
+import { type DerivedSource, startServer } from "./server.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -57,10 +59,14 @@ async function main() {
       intentGraphs: command.intentGraphs,
       catalogs: command.catalogs,
     });
+  const derived: DerivedSource[] = [];
+  const sdk = command.replay ? await loadSdk(process.cwd()) : null;
+  if (sdk) derived.push(boostReplaySource(discover, sdk));
+
   const token = randomBytes(24).toString("base64url");
   let server: Awaited<ReturnType<typeof startServer>>;
   try {
-    server = await startServer({ discover, uiDir, token, port: command.port });
+    server = await startServer({ discover, uiDir, token, port: command.port, derived });
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code;
     console.error(
@@ -84,6 +90,11 @@ async function main() {
       `  Found ${count("trace")} trace file(s), ${count("intent_graph")} intent graph(s), ${count("catalog_snapshot")} catalog snapshot(s).\n`,
     );
   }
+  console.log(
+    sdk
+      ? "  Boost panel: replaying searches with this project's @ratel-ai/sdk (read-only).\n"
+      : "  Boost panel: no @ratel-ai/sdk in this project, so searches are not replayed.\n",
+  );
   console.log("  Press Ctrl-C to stop.\n");
   if (command.open) openBrowser(server.url);
 
@@ -92,6 +103,56 @@ async function main() {
   };
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
+}
+
+/**
+ * The Boost replay as a derived source: recomputed only when the trace files (or the catalog
+ * snapshot) change, and at most once at a time.
+ */
+function boostReplaySource(
+  discover: () => Source[],
+  sdk: NonNullable<Awaited<ReturnType<typeof loadSdk>>>,
+): DerivedSource {
+  const inputs = () =>
+    discover().filter((s) => s.kind === "trace" || s.kind === "catalog_snapshot");
+  const signature = () =>
+    inputs()
+      .map((s) => `${s.path}:${s.size}:${s.mtime}`)
+      .join("|");
+  let cached: { signature: string; body: Promise<string> } | null = null;
+  return {
+    id: "boost-replay",
+    kind: "boost_replay",
+    label: "Boost replay (your @ratel-ai/sdk)",
+    describe: () => {
+      const files = inputs();
+      if (!files.some((s) => s.kind === "trace")) return null;
+      return {
+        size: files.reduce((n, s) => n + s.size, 0),
+        mtime: Math.max(...files.map((s) => s.mtime)),
+      };
+    },
+    read: () => {
+      const sig = signature();
+      if (cached?.signature !== sig) {
+        cached = {
+          signature: sig,
+          body: (async () => {
+            const files = inputs();
+            const traces = await Promise.all(
+              files.filter((s) => s.kind === "trace").map((s) => readFile(s.path, "utf8")),
+            );
+            const snapshotFile = files.find((s) => s.kind === "catalog_snapshot");
+            const snapshot = snapshotFile
+              ? JSON.parse(await readFile(snapshotFile.path, "utf8"))
+              : null;
+            return JSON.stringify(await computeReplay(traces, snapshot, sdk));
+          })(),
+        };
+      }
+      return cached.body;
+    },
+  };
 }
 
 void main();

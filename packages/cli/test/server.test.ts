@@ -28,7 +28,21 @@ beforeEach(async () => {
   writeFileSync(join(dir, "secret.txt"), "nope");
   const trace = join(dir, "t.jsonl");
   writeFileSync(trace, "0123456789");
-  server = await startServer({ discover: () => [source(trace, 10)], uiDir: ui, token, port: 0 });
+  server = await startServer({
+    discover: () => [source(trace, 10)],
+    uiDir: ui,
+    token,
+    port: 0,
+    derived: [
+      {
+        id: "boost-replay",
+        kind: "boost_replay",
+        label: "Boost replay",
+        describe: () => ({ size: 10, mtime: 1 }),
+        read: async () => JSON.stringify({ v: 1, method: "bm25", k: 5, turns: [] }),
+      },
+    ],
+  });
 });
 
 afterEach(async () => {
@@ -50,9 +64,21 @@ describe("startServer", () => {
   it("lists sources", async () => {
     const res = await api("/api/sources");
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      sources: [expect.objectContaining({ id: "abc123", kind: "trace", size: 10 })],
-    });
+    const { sources } = (await res.json()) as { sources: unknown[] };
+    expect(sources[0]).toEqual(expect.objectContaining({ id: "abc123", kind: "trace", size: 10 }));
+  });
+
+  it("lists and serves a derived source (the Boost replay)", async () => {
+    const { sources } = (await (await api("/api/sources")).json()) as {
+      sources: { id: string; kind: string }[];
+    };
+    expect(sources.map((s) => [s.id, s.kind])).toEqual([
+      ["abc123", "trace"],
+      ["boost-replay", "boost_replay"],
+    ]);
+    const res = await api("/api/sources/boost-replay");
+    expect(res.headers.get("content-type")).toContain("application/json");
+    expect(await res.json()).toMatchObject({ v: 1, turns: [] });
   });
 
   it("serves a source from an offset", async () => {

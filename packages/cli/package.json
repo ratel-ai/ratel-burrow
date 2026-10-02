@@ -44,8 +44,20 @@
     "test": "vitest run",
     "start": "node dist/bin.js"
   },
+  "dependencies": {
+    "@ratel-ai/burrow-model": "workspace:*"
+  },
+  "peerDependencies": {
+    "@ratel-ai/sdk": ">=0.12.0"
+  },
+  "peerDependenciesMeta": {
+    "@ratel-ai/sdk": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@ratel-ai/burrow-ui": "workspace:*",
+    "@ratel-ai/sdk": "0.13.0-rc.10",
     "@types/node": "^24.0.0",
     "typescript": "^5.9.0",
     "vitest": "^4.1.5"
