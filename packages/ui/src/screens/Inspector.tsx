@@ -210,8 +210,8 @@ function SearchCard({ search, focused }: { search: SearchRecord; focused: boolea
                   tone="green"
                   title={`similarity ${search.boost.similarity.toFixed(2)} · support ${search.boost.support}`}
                 >
-                  <Sparkles className="size-3" /> intent {search.boost.intent} · +
-                  {search.boost.promoted}
+                  <Sparkles className="size-3" /> {search.boost.intent} · {search.boost.promoted}{" "}
+                  promoted
                 </Pill>
               ) : (
                 <Pill title="Adaptive ranking found no matching intent">no intent match</Pill>
