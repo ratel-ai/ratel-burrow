@@ -30,12 +30,12 @@ import { navigate, useRoute } from "../lib/route";
  * cluster table folded away, and the cluster drawer). Read-only.
  */
 export function AdaptiveScreen() {
-  const { graphs, events, catalog } = useBurrow();
+  const { graphs, events, catalog, replay } = useBurrow();
   const { params } = useRoute();
   const loaded = graphs.find((g) => g.source.id === params.get("graph")) ?? graphs[0] ?? null;
 
   const state = useMemo(() => buildRankingState(events), [events]);
-  const boost = useMemo(() => buildBoostFromTrace(events), [events]);
+  const boost = useMemo(() => buildBoostFromTrace(events, { replay }), [events, replay]);
   const verdict =
     boost.online.fromTurn !== null ? boost.phases["ndcg@5"].online.verdict : boost.verdict;
   const warning = buildBoostWarning(verdict);

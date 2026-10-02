@@ -5,15 +5,25 @@ import {
   plural,
   relativeTime,
 } from "@ratel-ai/burrow-model";
-import { FileJson, FileText, Network } from "lucide-react";
+import { FileJson, FileText, Network, Repeat } from "lucide-react";
 import { useState } from "react";
 import { BurrowMascot } from "../components/Mascot";
 import { Card, Code, Empty, KindDot, Pill, Tile } from "../components/ui";
 import { useBurrow } from "../lib/data";
 import { href } from "../lib/route";
 
-const SOURCE_ICON = { trace: FileText, intent_graph: Network, catalog_snapshot: FileJson };
-const SOURCE_KIND = { trace: "trace", intent_graph: "intent graph", catalog_snapshot: "catalog" };
+const SOURCE_ICON = {
+  trace: FileText,
+  intent_graph: Network,
+  catalog_snapshot: FileJson,
+  boost_replay: Repeat,
+};
+const SOURCE_KIND = {
+  trace: "trace",
+  intent_graph: "intent graph",
+  catalog_snapshot: "catalog",
+  boost_replay: "replay",
+};
 
 export function OverviewScreen() {
   const { sources, catalog, health, savings, sessions, boost, graphs, status, badLines } =

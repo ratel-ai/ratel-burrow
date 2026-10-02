@@ -279,8 +279,8 @@ export function BoostPanel({ view }: { view: BoostView }) {
           className="mt-1 text-xs text-warm-muted"
         >
           {view.reported
-            ? "Online searches are what your runtime reported, with and without the graph. The watching period is estimated by replaying your searches on Cloud's lexical index."
-            : "Estimated by replaying your searches on Cloud's lexical index, with and without the graph as it stood at each search. Your runtime's own ranking may differ."}
+            ? "Searches the graph changed are what your runtime reported, with and without it. The rest are replayed locally on a BM25 index of your catalog (your @ratel-ai/sdk), with and without the graph as it stood at each search."
+            : "Estimated by replaying your searches locally on a BM25 index of your catalog (your @ratel-ai/sdk), with and without the graph as it stood at each search. Your runtime's own ranking may differ."}
         </p>
       ) : null}
 

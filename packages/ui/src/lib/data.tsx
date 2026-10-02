@@ -1,4 +1,5 @@
 import {
+  type BoostReplay,
   type BoostStats,
   buildBoostStats,
   buildCatalog,
@@ -9,6 +10,7 @@ import {
   estimateSavings,
   type Health,
   type IntentGraphDocument,
+  parseBoostReplay,
   parseIntentGraph,
   type SavingsEstimate,
   type SessionTimeline,
@@ -28,7 +30,7 @@ import {
 /** Mirrors the launcher's `GET /api/sources` (ADR 0002). */
 export interface Source {
   id: string;
-  kind: "trace" | "intent_graph" | "catalog_snapshot";
+  kind: "trace" | "intent_graph" | "catalog_snapshot" | "boost_replay";
   path: string;
   label: string;
   size: number;
@@ -53,6 +55,10 @@ export interface BurrowData {
   boost: BoostStats;
   graphs: LoadedGraph[];
   snapshotError: string | null;
+  /** The launcher's Boost replay (ADR 0005), or null when it has none. */
+  replay: BoostReplay | null;
+  /** Why the replay is missing, when the launcher said. */
+  replayError: string | null;
   lastUpdated: number | null;
 }
 
@@ -79,6 +85,8 @@ interface RawState {
   graphs: LoadedGraph[];
   snapshot: CatalogSnapshotFile | null;
   snapshotError: string | null;
+  replay: BoostReplay | null;
+  replayError: string | null;
   lastUpdated: number | null;
 }
 
@@ -92,6 +100,8 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
     graphs: [],
     snapshot: null,
     snapshotError: null,
+    replay: null,
+    replayError: null,
     lastUpdated: null,
   });
 
@@ -144,13 +154,19 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
         let graphs: LoadedGraph[] | undefined;
         let snapshot: CatalogSnapshotFile | null | undefined;
         let snapshotError: string | null = null;
+        let replay: BoostReplay | null = null;
+        let replayError: string | null = null;
         if (jsonChanged) {
           files.current = new Map(jsonSources.map((s) => [s.id, { size: s.size, mtime: s.mtime }]));
           graphs = [];
           snapshot = null;
           for (const s of jsonSources) {
             const text = await (await api(`/api/sources/${s.id}`)).text();
-            if (s.kind === "intent_graph") {
+            if (s.kind === "boost_replay") {
+              const parsed = parseBoostReplay(text);
+              if (parsed.ok) replay = parsed.replay;
+              else replayError = parsed.error;
+            } else if (s.kind === "intent_graph") {
               const parsed = parseIntentGraph(text);
               graphs.push(
                 parsed.ok
@@ -176,6 +192,8 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
             graphs: graphs ?? r.graphs,
             snapshot: snapshot === undefined ? r.snapshot : snapshot,
             snapshotError: jsonChanged ? snapshotError : r.snapshotError,
+            replay: jsonChanged ? replay : r.replay,
+            replayError: jsonChanged ? replayError : r.replayError,
             lastUpdated: Date.now(),
           }));
         }
@@ -218,6 +236,8 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
     sources: raw.sources,
     graphs: raw.graphs,
     snapshotError: raw.snapshotError,
+    replay: raw.replay,
+    replayError: raw.replayError,
     lastUpdated: raw.lastUpdated,
     ...derived,
   };
