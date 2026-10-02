@@ -1,0 +1,81 @@
+name: ci
+
+# Every check runs here so the single `ci-gate` job can be the one required status.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build
+      - run: pnpm typecheck
+      - run: pnpm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-dist
+          path: packages/ui/dist
+
+  python:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv venv --python 3.11 .venv
+      - run: uv pip install --python .venv -e '.[dev]'
+      - run: .venv/bin/ruff check . && .venv/bin/ruff format --check .
+      - run: .venv/bin/mypy src
+      - run: .venv/bin/pytest
+
+  conformance:
+    needs: [ts]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - uses: astral-sh/setup-uv@v5
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: |
+          cd python
+          uv venv --python 3.11 .venv
+          uv pip install --python .venv -e .
+          .venv/bin/python scripts/bundle_ui.py
+      - run: pnpm --filter @ratel-ai/burrow-conformance test
+
+  ci-gate:
+    if: always()
+    needs: [ts, python, conformance]
+    runs-on: ubuntu-latest
+    steps:
+      - name: All checks passed
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "A required job failed or was cancelled." && exit 1
+          fi

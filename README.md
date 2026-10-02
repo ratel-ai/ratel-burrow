@@ -28,25 +28,43 @@ npx @ratel-ai/burrow        # or: pip install ratel-burrow && ratel-burrow
 
 ### Using the Ratel SDK
 
-Point Ratel's existing sinks at a Burrow dir with one spread:
+Point Ratel's own trace sink at a Burrow dir (`./.ratel/burrow`), then run Burrow there.
 
 ```ts
 import { ratel } from "@ratel-ai/sdk";
-import { burrowConfig } from "@ratel-ai/burrow";
+import { burrowConfig, burrowPaths } from "@ratel-ai/burrow";
 
-const r = ratel({ ...yourConfig, ...burrowConfig() }); // writes to ./.ratel/burrow
+const r = ratel({ ...yourConfig, ...burrowConfig() }); // traces + catalog definitions
+// Adaptive ranking: save the graph where Burrow looks for it
+//   new LocalFileIntentGraphStorage({ path: burrowPaths().intentGraph })
 ```
 
 ```python
-from ratel_burrow import burrow_config
+from ratel_ai import ToolCatalog
+from ratel_burrow import burrow_config, burrow_paths
 
-catalog = ToolCatalog(**burrow_config())  # writes to ./.ratel/burrow
+catalog = ToolCatalog(**burrow_config())
+catalog.experimental_enable_catalog_definitions()  # descriptions + schemas
+# Adaptive ranking: LocalFileIntentGraphStorage(burrow_paths().intent_graph)
 ```
 
-Then run `npx @ratel-ai/burrow` (or `ratel-burrow`) in the same folder.
+```bash
+npx @ratel-ai/burrow        # or: ratel-burrow
+```
 
 Flags: `--dir <path>`, `--trace <file|dir>`, `--intent-graph <file>`, `--catalog <file>`,
-`--all-projects`, `--port <n>`, `--no-open`.
+`--all-projects`, `--port <n>`, `--no-open`. Any path flag replaces the defaults.
+
+Want to see every screen with data first? Run the example agent:
+`pnpm --filter @ratel-ai/burrow-example-ts-sdk start`, then `ratel-burrow` in `examples/ts-sdk`.
+
+## How it works
+
+Burrow's launcher (Node or Python) only finds files and serves them raw, on `127.0.0.1`,
+behind a token printed in the launch URL. Every route is a `GET`; nothing writes. The browser
+does all the parsing with `@ratel-ai/burrow-model`, so both launchers show the same thing.
+See [ADR 0002](docs/adr/0002-read-only-viewer-browser-side-parsing.md) and
+[ADR 0003](docs/adr/0003-data-sources-and-discovery.md).
 
 ## Repo
 
