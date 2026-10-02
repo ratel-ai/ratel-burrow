@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ratel-burrow"
+version = "0.1.0"
+description = "Ratel Burrow: a read-only localhost UI for Ratel — catalog, search inspector, adaptive ranking, agent health."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Agentified" }]
+keywords = ["ratel", "mcp", "ai-agents", "observability", "visualization"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11"]
+
+[project.scripts]
+ratel-burrow = "ratel_burrow.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/ratel-ai/ratel-burrow"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ratel_burrow"]
+# The UI bundle is copied in by scripts/bundle_ui.py and git-ignored, so list it explicitly.
+artifacts = ["src/ratel_burrow/ui/**"]
+
+[tool.hatch.build.targets.sdist]
+artifacts = ["src/ratel_burrow/ui/**"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
