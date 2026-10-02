@@ -1,0 +1,79 @@
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+
+/*
+ * Ratel brand tokens (ratel-cloud packages/brand/src/theme.css) with Ratel Cloud's
+ * near-black app surfaces. Dark only, like Cloud.
+ */
+@theme {
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-canvas: #0a0e0c;
+  --color-base-deep: #070a08;
+  --color-forest: #181f1a;
+  --color-forest-600: #111613;
+  --color-forest-300: #29312c;
+  --color-cream: #eee3ce;
+  --color-cream-dim: #d9cdb4;
+  --color-warm-muted: #9e9788;
+  --color-coral: #ed5126;
+  --color-coral-deep: #c4431f;
+  --color-green: #239452;
+  --color-green-deep: #1b7a43;
+  --color-teal: #7ba0a0;
+  --color-amber: #e0922f;
+
+  /* Capability identity (validated categorical set on forest-600: tool · skill · fact). */
+  --color-cap-tool: #239452;
+  --color-cap-skill: #ed5126;
+  --color-cap-fact: #8b7bf0;
+}
+
+:root {
+  color-scheme: dark;
+  --pixel-grid-image: radial-gradient(
+    circle at center,
+    var(--color-forest-300) 1px,
+    transparent 1.5px
+  );
+  --pixel-grid-size: 12px 12px;
+}
+
+html,
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-cream);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  scrollbar-color: var(--color-forest-300) transparent;
+}
+
+.font-mono,
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Uppercase micro-labels: the terminal-instrument signature from Ratel Cloud. */
+.eyebrow {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.6875rem;
+  color: var(--color-warm-muted);
+}
+
+.pixel-grid {
+  background-image: var(--pixel-grid-image);
+  background-size: var(--pixel-grid-size);
+}
+
+.pixel-grid-fade {
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
+  mask-image: linear-gradient(to bottom, #000, transparent);
+}
