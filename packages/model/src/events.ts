@@ -22,6 +22,8 @@ interface SearchPayload<Hit> {
   origin: Origin;
   top_k: number;
   hits: Hit[];
+  /** The top-k without the usage arm; present only when an intent graph matched (Ratel RC-204). */
+  base_hits?: Hit[];
   stages: SearchStage[];
   took_ms: number;
 }
@@ -91,6 +93,16 @@ export interface TracePayloads {
     active_coverage: number;
   };
   usage_model_mismatch: { built: string; active: string; dim_mismatch: boolean };
+  /** Adaptive-ranking state, reported by the SDK on enable, disable and rebuild (Ratel RC-204). */
+  usage_ranking_status: {
+    status: "active" | "inactive" | "unknown" | "paused";
+    reason: "enabled" | "disabled" | "rebuilt";
+    rev?: number;
+    graph_key?: string;
+    /** Whether the registry learns into the graph or only ranks from it. Defaults to true. */
+    learn: boolean;
+    model?: string;
+  };
   usage_boost: {
     intent: string | null;
     similarity: number;
@@ -159,6 +171,7 @@ const KNOWN_TYPES: ReadonlySet<string> = new Set<KnownEventType>([
   "usage_cluster_policy_changed",
   "usage_model_mismatch",
   "usage_boost",
+  "usage_ranking_status",
 ]);
 
 const ENVELOPE_KEYS = new Set([
@@ -215,6 +228,8 @@ export function parseTraceLine(line: string): TraceEvent | null {
     if (!ENVELOPE_KEYS.has(key)) payload[key] = value;
   }
   const known = KNOWN_TYPES.has(obj.type);
+  if (obj.type === "usage_ranking_status" && typeof payload.learn !== "boolean")
+    payload.learn = true;
   return { ...payload, ...envelope, type: obj.type, known } as TraceEvent;
 }
 
