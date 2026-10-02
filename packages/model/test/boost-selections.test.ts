@@ -34,7 +34,7 @@ describe("buildBoostSelections", () => {
     ).toEqual([
       ["refund the order", "stripe_refund", ["baseline:serving"]],
       ["track my parcel", "shipping_track", ["baseline:serving"]],
-      ["refund order 42", "stripe_refund", ["adaptive:serving", "baseline:shadow"]],
+      ["refund order 42", "stripe_refund", ["baseline:shadow", "adaptive:serving"]],
       ["email the customer", "email_send", ["adaptive:serving", "baseline:shadow"]],
     ]);
   });

@@ -1,11 +1,14 @@
 import { type EventOf, isEvent, type TraceEvent } from "../events.js";
 import { attachBoosts } from "./attach.js";
 import type { ArmRanking, EvaluableSelection } from "./ground-truth.js";
+import { type BoostReplay, type BoostReplayTurn, boostTurnKey } from "./replay.js";
 import { BOOST_BASELINE_ARM, BOOST_TREATMENT_ARM, type BoostView, buildBoostView } from "./view.js";
 
 export interface BoostSelectionOptions {
   /** Only count `usage_ranking_status` reports for this graph. */
   graphKey?: string;
+  /** The launcher's replay: both rankings for searches the runtime did not report itself. */
+  replay?: BoostReplay | null;
 }
 
 /**
@@ -43,6 +46,13 @@ export function buildBoostSelections(
   events: readonly TraceEvent[],
   options: BoostSelectionOptions = {},
 ): EvaluableSelection[] {
+  return collectSelections(events, options).selections;
+}
+
+function collectSelections(
+  events: readonly TraceEvent[],
+  options: BoostSelectionOptions,
+): { selections: EvaluableSelection[]; replayedTurns: number } {
   const forGraph = (e: EventOf<"usage_ranking_status">) =>
     options.graphKey === undefined || e.graph_key === options.graphKey;
   const hasStatus = events.some((e) => isEvent(e, "usage_ranking_status") && forGraph(e));
@@ -84,13 +94,31 @@ export function buildBoostSelections(
     }
   });
 
+  const replayed = new Map<string, BoostReplayTurn>();
+  for (const t of options.replay?.turns ?? []) replayed.set(t.key, t);
+
   const selections: EvaluableSelection[] = [];
+  let replayedTurns = 0;
   for (const key of order) {
     const turn = turns.get(key);
     if (!turn?.invoked) continue;
     const served = turn.search.hits.map((h) => h.tool_id);
+    const reported = (turn.search.base_hits?.length ?? 0) > 0;
+    const replay = replayed.get(boostTurnKey(turn.search));
     let arms: ArmRanking[];
-    if (!turn.active) {
+    if (!reported && replay) replayedTurns += 1;
+    if (reported || replay) {
+      // Cloud's fold: both arms on every turn. The runtime's own lists when it reported them,
+      // else the replay; the arm the agent saw serves, the other shadows.
+      const plain = reported
+        ? (turn.search.base_hits ?? []).map((h) => h.tool_id)
+        : (replay?.plain_ids ?? []);
+      const boosted = reported ? served : (replay?.boosted_ids ?? []);
+      arms = [
+        { arm: BOOST_BASELINE_ARM, role: turn.active ? "shadow" : "serving", resultIds: plain },
+        { arm: BOOST_TREATMENT_ARM, role: turn.active ? "serving" : "shadow", resultIds: boosted },
+      ];
+    } else if (!turn.active) {
       arms = [{ arm: BOOST_BASELINE_ARM, role: "serving", resultIds: served }];
     } else if (both) {
       const base = turn.search.base_hits?.length
@@ -104,28 +132,31 @@ export function buildBoostSelections(
       arms = [{ arm: BOOST_TREATMENT_ARM, role: "serving", resultIds: served }];
     }
     selections.push({
-      selectionId: key,
+      selectionId: boostTurnKey(turn.search),
       occurredAt: new Date(turn.search.ts),
       query: turn.search.query,
       arms,
       invokedToolId: turn.invoked,
     });
   }
-  return selections;
+  return { selections, replayedTurns };
 }
 
 /**
- * The Boost panel's view model from a trace. Without both rankings the
- * reference arm is left out, so the panel shows the adaptive arm alone rather
- * than a baseline it cannot know.
+ * The Boost panel's view model from a trace, plus the launcher's replay when
+ * there is one. With neither a replay nor `base_hits` the reference arm is left
+ * out, so the panel shows the adaptive arm alone rather than a baseline it
+ * cannot know.
  */
 export function buildBoostFromTrace(
   events: readonly TraceEvent[],
   options: BoostSelectionOptions = {},
 ): BoostView {
-  const both = reportsBaseHits(events);
-  return buildBoostView(buildBoostSelections(events, options), {
-    reported: both,
-    ...(both ? {} : { referenceArm: null }),
+  const reported = reportsBaseHits(events);
+  const { selections, replayedTurns } = collectSelections(events, options);
+  return buildBoostView(selections, {
+    reported,
+    estimated: replayedTurns > 0,
+    ...(reported || options.replay ? {} : { referenceArm: null }),
   });
 }
