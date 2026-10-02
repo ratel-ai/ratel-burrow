@@ -3,15 +3,20 @@
 from __future__ import annotations
 
 import argparse
+import json
 import secrets
 import signal
 import sys
+import threading
 import webbrowser
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from . import __version__
 from .discovery import Source, discover_sources
-from .server import start_server
+from .replay import compute_replay, load_sdk
+from .server import DerivedSource, start_server
 
 UI_DIR = Path(__file__).parent / "ui"
 
@@ -68,6 +73,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         action="store_false",
         help="print the URL without opening a browser",
     )
+    p.add_argument(
+        "--no-replay",
+        dest="replay",
+        action="store_false",
+        help="don't replay searches for the Boost panel (it uses your installed ratel-ai, "
+        "read-only)",
+    )
     p.add_argument("-v", "--version", action="version", version=__version__)
     return p.parse_args(argv)
 
@@ -92,7 +104,11 @@ def main(argv: list[str] | None = None) -> int:
 
     token = secrets.token_urlsafe(24)
     try:
-        server = start_server(discover=discover, ui_dir=UI_DIR, token=token, port=args.port)
+        sdk = load_sdk() if args.replay else None
+        derived = [boost_replay_source(discover, sdk)] if sdk is not None else []
+        server = start_server(
+            discover=discover, ui_dir=UI_DIR, token=token, port=args.port, derived=derived
+        )
     except OSError as err:
         print(f"ratel-burrow: could not bind port {args.port}: {err.strerror}", file=sys.stderr)
         return 1
@@ -111,6 +127,11 @@ def main(argv: list[str] | None = None) -> int:
             f"  Found {count('trace')} trace file(s), {count('intent_graph')} intent graph(s), "
             f"{count('catalog_snapshot')} catalog snapshot(s).\n"
         )
+    print(
+        "  Boost panel: replaying searches with your installed ratel-ai (read-only).\n"
+        if derived
+        else "  Boost panel: ratel-ai is not installed here, so searches are not replayed.\n"
+    )
     print("  Press Ctrl-C to stop.\n")
     if args.open:
         webbrowser.open(server.url)
@@ -123,6 +144,41 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         server.close()
     return 0
+
+
+def boost_replay_source(discover: Callable[[], list[Source]], sdk: Any) -> DerivedSource:
+    """The Boost replay, recomputed only when the trace files or catalog snapshot change."""
+    lock = threading.Lock()
+    cache: dict[str, str] = {}
+
+    def inputs() -> list[Source]:
+        return [s for s in discover() if s.kind in ("trace", "catalog_snapshot")]
+
+    def describe() -> tuple[int, float] | None:
+        files = inputs()
+        if not any(s.kind == "trace" for s in files):
+            return None
+        return sum(s.size for s in files), max(s.mtime for s in files)
+
+    def read() -> str:
+        files = inputs()
+        signature = "|".join(f"{s.path}:{s.size}:{s.mtime}" for s in files)
+        with lock:
+            if signature not in cache:
+                traces = [Path(s.path).read_text() for s in files if s.kind == "trace"]
+                snap = next((s for s in files if s.kind == "catalog_snapshot"), None)
+                snapshot = json.loads(Path(snap.path).read_text()) if snap else None
+                cache.clear()
+                cache[signature] = json.dumps(compute_replay(traces, snapshot, sdk))
+            return cache[signature]
+
+    return DerivedSource(
+        id="boost-replay",
+        kind="boost_replay",
+        label="Boost replay (your ratel-ai)",
+        describe=describe,
+        read=read,
+    )
 
 
 if __name__ == "__main__":

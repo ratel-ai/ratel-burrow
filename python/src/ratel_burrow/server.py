@@ -33,6 +33,19 @@ CHUNK = 64 * 1024
 
 
 @dataclass
+class DerivedSource:
+    """A source the launcher computes from the files rather than serves raw (ADR 0005)."""
+
+    id: str
+    kind: str
+    label: str
+    #: (size, mtime) while available, None to hide it; changes whenever its inputs do.
+    describe: Callable[[], tuple[int, float] | None]
+    #: The JSON body.
+    read: Callable[[], str]
+
+
+@dataclass
 class BurrowServer:
     origin: str
     url: str
@@ -60,8 +73,28 @@ def start_server(
     token: str,
     port: int = 0,
     host: str = "127.0.0.1",
+    derived: list[DerivedSource] | None = None,
 ) -> BurrowServer:
     ui_root = Path(ui_dir).resolve()
+    derived_sources = derived or []
+
+    def list_sources() -> list[dict[str, object]]:
+        out: list[dict[str, object]] = [s.to_json() for s in discover()]
+        for d in derived_sources:
+            described = d.describe()
+            if described is not None:
+                size, mtime = described
+                out.append(
+                    {
+                        "id": d.id,
+                        "kind": d.kind,
+                        "path": "",
+                        "label": d.label,
+                        "size": size,
+                        "mtime": mtime,
+                    }
+                )
+        return out
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "ratel-burrow"
@@ -119,7 +152,18 @@ def start_server(
                 if not _safe_equal(given, token):
                     return self._json(401, {"error": "unauthorized"})
                 if path == "/api/sources":
-                    return self._json(200, {"sources": [s.to_json() for s in discover()]})
+                    return self._json(200, {"sources": list_sources()})
+                derived_match = next(
+                    (d for d in derived_sources if path == f"/api/sources/{d.id}"), None
+                )
+                if derived_match is not None:
+                    if derived_match.describe() is None:
+                        return self._json(404, {"error": "unavailable"})
+                    try:
+                        body = derived_match.read()
+                    except Exception as err:  # the replay must never break the other sources
+                        body = json.dumps({"error": str(err)})
+                    return self._send(200, body.encode(), "application/json; charset=utf-8")
                 if path.startswith("/api/sources/"):
                     sid = path[len("/api/sources/") :]
                     match = next((s for s in discover() if s.id == sid), None)

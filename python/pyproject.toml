@@ -20,6 +20,8 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.11"]
+# The Boost panel replays searches with the user's own Ratel SDK when it is installed.
+replay = ["ratel-ai>=0.12"]
 
 [project.scripts]
 ratel-burrow = "ratel_burrow.cli:main"

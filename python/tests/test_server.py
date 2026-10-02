@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from ratel_burrow.discovery import Source
-from ratel_burrow.server import BurrowServer, start_server
+from ratel_burrow.server import BurrowServer, DerivedSource, start_server
 
 TOKEN = "test-token"
 
@@ -21,7 +21,14 @@ def server(tmp_path: Path) -> Iterator[BurrowServer]:
     trace = tmp_path / "t.jsonl"
     trace.write_text("0123456789")
     src = Source(id="abc123", kind="trace", path=str(trace), label="t.jsonl", size=10, mtime=1)
-    srv = start_server(discover=lambda: [src], ui_dir=ui, token=TOKEN, port=0)
+    replay = DerivedSource(
+        id="boost-replay",
+        kind="boost_replay",
+        label="Boost replay",
+        describe=lambda: (10, 1.0),
+        read=lambda: json.dumps({"v": 1, "method": "bm25", "k": 5, "turns": []}),
+    )
+    srv = start_server(discover=lambda: [src], ui_dir=ui, token=TOKEN, port=0, derived=[replay])
     yield srv
     srv.close()
 
@@ -55,6 +62,17 @@ def test_lists_sources(server: BurrowServer) -> None:
     assert status == 200
     sources = json.loads(body)["sources"]
     assert sources[0]["id"] == "abc123" and sources[0]["size"] == 10
+
+
+def test_lists_and_serves_derived_source(server: BurrowServer) -> None:
+    sources = json.loads(req(server, "/api/sources")[2])["sources"]
+    assert [(s["id"], s["kind"]) for s in sources] == [
+        ("abc123", "trace"),
+        ("boost-replay", "boost_replay"),
+    ]
+    status, headers, body = req(server, "/api/sources/boost-replay")
+    assert status == 200 and "application/json" in headers["content-type"]
+    assert json.loads(body)["turns"] == []
 
 
 def test_serves_source_from_offset(server: BurrowServer) -> None:
