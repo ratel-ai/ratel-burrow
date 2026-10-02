@@ -30,7 +30,7 @@ describe("parseCliArgs", () => {
       "--all-projects",
       "--no-open",
       "--port",
-      "5731",
+      "4377",
     ]);
     expect(parsed).toMatchObject({
       traces: ["a.jsonl", "logs/"],
@@ -39,7 +39,7 @@ describe("parseCliArgs", () => {
       dirs: ["d"],
       allProjects: true,
       open: false,
-      port: 5731,
+      port: 4377,
     });
   });
 

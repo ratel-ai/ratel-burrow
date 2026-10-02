@@ -62,7 +62,19 @@ async function main() {
       allProjects: command.allProjects,
     });
   const token = randomBytes(24).toString("base64url");
-  const server = await startServer({ discover, uiDir, token, port: command.port });
+  let server: Awaited<ReturnType<typeof startServer>>;
+  try {
+    server = await startServer({ discover, uiDir, token, port: command.port });
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    console.error(
+      code === "EADDRINUSE"
+        ? `ratel-burrow: port ${command.port} is in use; pick another with --port, or omit it for a free one.`
+        : `ratel-burrow: could not start the server: ${(err as Error).message}`,
+    );
+    process.exitCode = 1;
+    return;
+  }
 
   const sources = discover();
   console.log(`\n  Ratel Burrow ${version()} — read-only\n`);
