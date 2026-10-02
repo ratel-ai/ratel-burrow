@@ -51,7 +51,7 @@ export interface SessionTimeline {
   stats: SessionStats;
 }
 
-/** A `usage_boost` belongs to the tool search it ran inside: same session, this close in time. */
+/** A `usage_boost` belongs to the tool or skill search it ran inside: same session, this close in time. */
 const BOOST_WINDOW_MS = 1_000;
 
 function searchRecord(e: TraceEvent, index: number): SearchRecord | null {
@@ -117,11 +117,11 @@ export function buildInspector(events: readonly TraceEvent[]): SessionTimeline[]
       if (record) searches.push(record);
     });
 
-    const toolSearches = searches.filter((s) => s.kind === "tool");
+    const rankedSearches = searches.filter((s) => s.kind !== "fact");
     for (const e of list) {
       if (!isEvent(e, "usage_boost")) continue;
       let best: SearchRecord | undefined;
-      for (const s of toolSearches) {
+      for (const s of rankedSearches) {
         const sameTurn = !e.turnId || !s.turnId || e.turnId === s.turnId;
         const dt = Math.abs(s.ts - e.ts);
         if (!sameTurn || dt > BOOST_WINDOW_MS || s.boost) continue;

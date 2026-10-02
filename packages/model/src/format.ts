@@ -16,6 +16,7 @@ export function relativeTime(ts: number | null, now: number = Date.now()): strin
 
 export function formatMs(ms: number | null): string {
   if (ms === null || !Number.isFinite(ms)) return "–";
+  if (ms < 1) return "<1 ms";
   if (ms < 1_000) return `${Math.round(ms)} ms`;
   if (ms < 60_000) return `${(ms / 1_000).toFixed(ms < 10_000 ? 2 : 1)} s`;
   return `${(ms / 60_000).toFixed(1)} min`;
@@ -40,4 +41,9 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1_000) return `${Math.round(bytes)} B`;
   if (bytes < 1_000_000) return `${(bytes / 1_000).toFixed(1)} kB`;
   return `${(bytes / 1_000_000).toFixed(1)} MB`;
+}
+
+/** `1 session`, `3 sessions`; pass `many` for irregular plurals. */
+export function plural(n: number, one: string, many = `${one}s`): string {
+  return `${formatCount(n)} ${n === 1 ? one : many}`;
 }

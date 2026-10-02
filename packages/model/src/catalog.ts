@@ -5,6 +5,7 @@ import { percentile } from "./stats.js";
 export interface CatalogStats {
   /** Times it appeared in a search's hits. */
   retrieved: number;
+  /** Calls for tools and skills; injections into the context for facts. */
   invoked: number;
   errors: number;
   avgLatencyMs: number | null;
@@ -150,6 +151,10 @@ export function buildCatalog(
             : (["fact", ev.fact_id] as const);
       const e = entry(kind, id);
       e.removed = ev.kind === "remove";
+      seen(e, ev.ts);
+    } else if (isEvent(ev, "fact_inject")) {
+      const e = entry("fact", ev.fact_id);
+      e.stats.invoked += 1;
       seen(e, ev.ts);
     } else if (isEvent(ev, "search")) {
       for (const h of ev.hits) {

@@ -20,6 +20,7 @@ describe("buildCatalog", () => {
     });
     expect(refund?.stats).toMatchObject({ retrieved: 1, invoked: 1, errors: 0, avgLatencyMs: 200 });
     expect(catalog.tools.find((t) => t.id === "send_email")?.searchableOverridden).toBe(true);
+    expect(catalog.facts[0]?.stats).toMatchObject({ invoked: 1 });
   });
 
   it("falls back to ids seen in churn and hits when definitions are missing", () => {

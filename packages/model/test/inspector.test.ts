@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { parseTraceLog } from "../src/events";
 import { buildInspector } from "../src/inspector";
 import { v1Events, v2Events } from "./helpers";
 
@@ -24,6 +25,16 @@ describe("buildInspector", () => {
     expect(email?.invocations).toEqual([
       expect.objectContaining({ id: "crm_lookup", rank: null, error: "timeout" }),
     ]);
+  });
+
+  it("attaches usage boosts to skill searches too", () => {
+    const events = parseTraceLog(
+      [
+        '{"v":2,"ts":10,"session_id":"s","type":"skill_search","query":"q","origin":"agent","top_k":1,"hits":[],"stages":[],"took_ms":1}',
+        '{"v":2,"ts":10,"session_id":"s","type":"usage_boost","intent":"i","similarity":1,"support":2,"promoted":1,"dropped":0}',
+      ].join("\n"),
+    ).events;
+    expect(buildInspector(events)[0]?.searches[0]?.boost).toMatchObject({ intent: "i" });
   });
 
   it("links skill loads to skill searches", () => {

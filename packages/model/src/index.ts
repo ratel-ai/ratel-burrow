@@ -8,3 +8,4 @@ export * from "./intent-graph/index.js";
 export * from "./invocations.js";
 export * from "./savings.js";
 export * from "./stats.js";
+export * from "./tail.js";
