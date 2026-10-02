@@ -11,28 +11,17 @@ export function BadgerMark({ className }: { className?: string }) {
   );
 }
 
-/** Ratel Burrow's mascot: the badger stepping out of its burrow. */
+/** Ratel Burrow's mascot: the badger peering out of its burrow (`public/burrow.png`). */
 export function BurrowMascot({ className, title }: { className?: string; title?: string }) {
   return (
-    <svg
-      viewBox="0 0 640 320"
-      className={className}
-      role={title ? "img" : undefined}
-      aria-label={title}
+    <img
+      src="./burrow.png"
+      alt={title ?? ""}
       aria-hidden={title ? undefined : true}
-    >
-      <path d="M24 286C52 150 168 82 300 82C410 82 486 150 512 286Z" fill="var(--color-green)" />
-      <path
-        d="M118 286C118 206 170 160 236 160C302 160 354 206 354 286Z"
-        fill="var(--color-base-deep)"
-      />
-      <circle cx="94" cy="276" r="7" fill="var(--color-green-deep)" />
-      <circle cx="74" cy="282" r="4" fill="var(--color-green-deep)" />
-      <circle cx="380" cy="279" r="5" fill="var(--color-green-deep)" />
-      <g transform="translate(300 151) scale(0.52)">
-        <path fillRule="evenodd" clipRule="evenodd" fill="var(--color-cream)" d={BADGER_PATH} />
-      </g>
-      <rect x="8" y="284" width="624" height="6" rx="3" fill="var(--color-cream-dim)" />
-    </svg>
+      className={className}
+      width={640}
+      height={354}
+      draggable={false}
+    />
   );
 }

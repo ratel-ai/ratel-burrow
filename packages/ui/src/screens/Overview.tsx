@@ -44,8 +44,8 @@ export function OverviewScreen() {
         <div className="pixel-grid pixel-grid-fade pointer-events-none absolute inset-0 opacity-60" />
         <div className="relative flex flex-wrap items-center gap-8">
           <BurrowMascot
-            className="w-64 shrink-0"
-            title="A honey badger stepping out of its burrow"
+            className="w-80 shrink-0"
+            title="A honey badger peering out of its burrow"
           />
           <div className="min-w-64 flex-1">
             <div className="eyebrow">Ratel Burrow</div>

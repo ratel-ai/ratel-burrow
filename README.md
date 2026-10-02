@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/burrow.svg" alt="Ratel Burrow" width="320" />
+  <img src="assets/burrow.png" alt="Ratel Burrow: a honey badger peering out of its burrow" width="420" />
   <h1>Ratel Burrow</h1>
   <p>A read-only window into <a href="https://github.com/ratel-ai/ratel">Ratel</a>: see your catalog, every search and invocation, adaptive ranking, and agent health — on localhost.</p>
 </div>
