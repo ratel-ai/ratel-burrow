@@ -1,6 +1,6 @@
-import { isEvent, type TraceEvent } from "./events";
-import { buildInspector } from "./inspector";
-import { bucketWidth, mean } from "./stats";
+import { isEvent, type TraceEvent } from "./events.js";
+import { buildInspector } from "./inspector.js";
+import { bucketWidth, mean } from "./stats.js";
 
 export interface BoostBucket {
   start: number;

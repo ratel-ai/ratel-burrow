@@ -1,6 +1,6 @@
-import { type CatalogKind, isEvent, type TraceEvent } from "./events";
-import { collectInvocations, serverIndex } from "./invocations";
-import { percentile } from "./stats";
+import { type CatalogKind, isEvent, type TraceEvent } from "./events.js";
+import { collectInvocations, serverIndex } from "./invocations.js";
+import { percentile } from "./stats.js";
 
 export interface CatalogStats {
   /** Times it appeared in a search's hits. */

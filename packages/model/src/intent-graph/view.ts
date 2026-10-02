@@ -4,7 +4,7 @@
  * edge rows from a database; Burrow derives the same rows from the document
  * with `graphRows`.
  */
-import type { IntentGraphDocument, IntentGraphEdgeKind } from "./wire";
+import type { IntentGraphDocument, IntentGraphEdgeKind } from "./wire.js";
 
 /** Confirmed observations at which the ranker gives a cluster full weight (ADR-0014). */
 export const SUPPORT_FULL = 3;

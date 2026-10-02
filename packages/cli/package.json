@@ -1,0 +1,52 @@
+{
+  "name": "@ratel-ai/burrow",
+  "version": "0.1.0",
+  "description": "Ratel Burrow: a read-only localhost UI for Ratel — catalog, search inspector, adaptive ranking, agent health.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "ratel-burrow": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "license": "MIT",
+  "author": "Agentified",
+  "homepage": "https://github.com/ratel-ai/ratel-burrow",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ratel-ai/ratel-burrow.git",
+    "directory": "packages/cli"
+  },
+  "keywords": [
+    "ratel",
+    "mcp",
+    "ai-agents",
+    "observability",
+    "visualization"
+  ],
+  "engines": {
+    "node": ">=20.6.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-ui.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "start": "node dist/bin.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^4.1.5"
+  }
+}

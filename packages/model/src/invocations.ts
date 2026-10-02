@@ -1,4 +1,4 @@
-import { isEvent, type TraceEvent } from "./events";
+import { isEvent, type TraceEvent } from "./events.js";
 
 /** One capability call, deduplicated across the event families that report it. */
 export interface Invocation {

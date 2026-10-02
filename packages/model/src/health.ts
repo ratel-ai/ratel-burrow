@@ -1,6 +1,6 @@
-import { isEvent, type TraceEvent } from "./events";
-import { collectInvocations } from "./invocations";
-import { percentile } from "./stats";
+import { isEvent, type TraceEvent } from "./events.js";
+import { collectInvocations } from "./invocations.js";
+import { percentile } from "./stats.js";
 
 export interface LatencySummary {
   count: number;

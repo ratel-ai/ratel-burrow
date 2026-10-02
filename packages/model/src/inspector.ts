@@ -1,5 +1,5 @@
-import { type EventOf, isEvent, type Origin, type SearchStage, type TraceEvent } from "./events";
-import { collectInvocations, type Invocation } from "./invocations";
+import { type EventOf, isEvent, type Origin, type SearchStage, type TraceEvent } from "./events.js";
+import { collectInvocations, type Invocation } from "./invocations.js";
 
 export type SearchKind = "tool" | "skill" | "fact";
 

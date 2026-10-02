@@ -1,6 +1,6 @@
-import type { Catalog } from "./catalog";
-import { isEvent, type TraceEvent } from "./events";
-import { bucketWidth } from "./stats";
+import type { Catalog } from "./catalog.js";
+import { isEvent, type TraceEvent } from "./events.js";
+import { bucketWidth } from "./stats.js";
 
 /**
  * Context savings, estimated the way Ratel Cloud does (`lib/quality/tokens.ts`):
