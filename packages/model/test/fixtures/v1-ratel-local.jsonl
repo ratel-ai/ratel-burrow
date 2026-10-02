@@ -1,0 +1,13 @@
+{"v":1,"ts":1788441848300,"session_id":"s1","type":"upstream_register","server":"filesystem","transport":"StdioClientTransport","tool_count":2}
+{"v":1,"ts":1788441848301,"session_id":"s1","type":"index_churn","kind":"add","tool_id":"filesystem__list_directory"}
+{"v":1,"ts":1788441848302,"session_id":"s1","type":"index_churn","kind":"add","tool_id":"filesystem__read_file"}
+{"v":1,"ts":1788441848307,"session_id":"s1","type":"ratel_tool_payload","server":"filesystem","tool_count":2,"estimated_tokens":400}
+{"v":1,"ts":1788442601900,"session_id":"s1","type":"search","query":"list files in a folder","origin":"agent","top_k":5,"hits":[{"tool_id":"filesystem__list_directory","score":3.2},{"tool_id":"filesystem__read_file","score":1.1}],"stages":[{"name":"bm25","took_ms":2,"top_score":3.2}],"took_ms":2}
+{"v":1,"ts":1788442601901,"session_id":"s1","type":"gateway_search","query":"list files in a folder","origin":"agent","top_k":5,"hits":2,"took_ms":3}
+{"v":1,"ts":1788442601920,"session_id":"s1","type":"invoke_start","tool_id":"filesystem__list_directory","args_size_bytes":12}
+{"v":1,"ts":1788442602530,"session_id":"s1","type":"upstream_invoke","server":"filesystem","tool_id":"filesystem__list_directory","took_ms":609}
+{"v":1,"ts":1788442602530,"session_id":"s1","type":"invoke_end","tool_id":"filesystem__list_directory","took_ms":610}
+{"v":1,"ts":1788442602531,"session_id":"s1","type":"gateway_invoke","tool_id":"filesystem__list_directory","took_ms":612}
+{"v":1,"ts":1788442602535,"session_id":"s1","type":"gateway_error","tool_id":"filesystem.list_directory","error":"unknown_tool_id"}
+not json at all
+{"v":1,"ts":1788442602600,"session_id":"s1","type":"search","query":"delete a file","origin":"agent","top_k":5,"hits":[],"stages":[{"name":"bm25","took_ms":1,"top_score":null}],"took_ms":1}

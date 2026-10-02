@@ -1,0 +1,10 @@
+{
+  "v": 1,
+  "built_from_ts": 1790000001000,
+  "rev": 7,
+  "model": "hf|repo=22:BAAI/bge-small-en-v1.5|revision=3:abc|pool=3:cls",
+  "intents": [
+    { "id": "c1", "label": "refund the last order", "terms": ["refund", "order"], "members": ["refund the last order", "refund order 42"], "centroid": [0.1, 0.2], "support": 4, "seeded_support": 1, "last_ts": 1790000001000, "tools": { "stripe_refund": 4, "send_email": 1 }, "skills": { "refund_playbook": 2 }, "surfaced_tools": { "send_email": 5 } },
+    { "id": "c2", "label": "email the customer", "terms": ["email"], "members": ["email the customer"], "support": 1, "last_ts": 1790000000500, "tools": { "send_email": 1 }, "skills": {} }
+  ]
+}
