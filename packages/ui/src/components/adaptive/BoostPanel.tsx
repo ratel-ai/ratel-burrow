@@ -507,40 +507,51 @@ export function BoostPanel({ view }: { view: BoostView }) {
             ) : null}
           </div>
 
-          <p data-boost-evidence="true" className="mt-4 text-[11px] leading-5 text-warm-muted">
-            {view.turns.length} turns, top-{view.k}
-            {all.length > BOOST_MIN_TURNS ? `, drawn from turn ${BOOST_MIN_TURNS}` : ""}. Reference:{" "}
-            {reference.arm ?? "none"}
-            {reference.arm && reference.k ? ` (top ${reference.k})` : ""}. Targets:{" "}
-            {view.evidence.revealed} invoked tools
-            {view.evidence.reference > 0
-              ? `, ${view.evidence.reference} ${reference.arm} lists`
-              : ""}
-            {view.evidence.skipped > 0 ? `, ${view.evidence.skipped} unscored` : ""}.
-            {view.online.since !== null
-              ? view.online.fromTurn === null
-                ? ` All turns are offline: no runtime had boosted from this graph before ${shortDate(view.online.since)} UTC.`
-                : view.online.fromTurn === 1
-                  ? ` All turns are online: runtimes have boosted from this graph since ${shortDate(view.online.since)} UTC.`
-                  : ` Offline through turn ${view.online.fromTurn - 1}, online from turn ${view.online.fromTurn} (${shortDate(view.online.since)} UTC${view.online.source === "served" ? ", when the graph's ranking started reaching your agent" : ""}).`
-              : ""}
-            {reference.scored &&
-            view.phases[metric].offline.turns > 0 &&
-            view.phases[metric].online.turns > 0
-              ? ` ${reference.arm} ${definition.label} ${fmt(metric, view.phases[metric].offline.reference)} offline, ${fmt(metric, view.phases[metric].online.reference)} online.`
-              : ""}
-            {view.evidence.bias.adaptive === "independent" &&
-            view.evidence.revealed > 0 &&
-            reference.arm
-              ? ` Your agent saw the ${reference.arm} results; the graph's ranking ran alongside without affecting them.`
-              : null}
-            {view.evidence.bias.adaptive === "self-selected" && view.evidence.revealed > 0
-              ? " Your agent saw the graph's ranking for these searches and could only pick from it, so read the result as an upper bound."
-              : null}
-            {view.evidence.bias.adaptive === "mixed" && view.evidence.revealed > 0 && reference.arm
-              ? ` Before the switch your agent saw the ${reference.arm} results; after it, the graph's ranking.`
-              : null}
-          </p>
+          <details className="mt-4 text-[11px] leading-5 text-warm-muted">
+            <summary className="cursor-pointer list-none hover:text-cream-dim">
+              {view.turns.length} turns · top {view.k}
+              {view.online.fromTurn !== null && view.online.fromTurn > 1
+                ? ` · online from turn ${view.online.fromTurn}`
+                : ""}{" "}
+              · <span className="underline decoration-dotted underline-offset-2">details</span>
+            </summary>
+            <p data-boost-evidence="true" className="mt-1">
+              {view.turns.length} turns, top-{view.k}
+              {all.length > BOOST_MIN_TURNS ? `, drawn from turn ${BOOST_MIN_TURNS}` : ""}.
+              Reference: {reference.arm ?? "none"}
+              {reference.arm && reference.k ? ` (top ${reference.k})` : ""}. Targets:{" "}
+              {view.evidence.revealed} invoked tools
+              {view.evidence.reference > 0
+                ? `, ${view.evidence.reference} ${reference.arm} lists`
+                : ""}
+              {view.evidence.skipped > 0 ? `, ${view.evidence.skipped} unscored` : ""}.
+              {view.online.since !== null
+                ? view.online.fromTurn === null
+                  ? ` All turns are offline: no runtime had boosted from this graph before ${shortDate(view.online.since)} UTC.`
+                  : view.online.fromTurn === 1
+                    ? ` All turns are online: runtimes have boosted from this graph since ${shortDate(view.online.since)} UTC.`
+                    : ` Offline through turn ${view.online.fromTurn - 1}, online from turn ${view.online.fromTurn} (${shortDate(view.online.since)} UTC${view.online.source === "served" ? ", when the graph's ranking started reaching your agent" : ""}).`
+                : ""}
+              {reference.scored &&
+              view.phases[metric].offline.turns > 0 &&
+              view.phases[metric].online.turns > 0
+                ? ` ${reference.arm} ${definition.label} ${fmt(metric, view.phases[metric].offline.reference)} offline, ${fmt(metric, view.phases[metric].online.reference)} online.`
+                : ""}
+              {view.evidence.bias.adaptive === "independent" &&
+              view.evidence.revealed > 0 &&
+              reference.arm
+                ? ` Your agent saw the ${reference.arm} results; the graph's ranking ran alongside without affecting them.`
+                : null}
+              {view.evidence.bias.adaptive === "self-selected" && view.evidence.revealed > 0
+                ? " Your agent saw the graph's ranking for these searches and could only pick from it, so read the result as an upper bound."
+                : null}
+              {view.evidence.bias.adaptive === "mixed" &&
+              view.evidence.revealed > 0 &&
+              reference.arm
+                ? ` Before the switch your agent saw the ${reference.arm} results; after it, the graph's ranking.`
+                : null}
+            </p>
+          </details>
         </>
       )}
     </section>
