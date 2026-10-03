@@ -1,6 +1,8 @@
 import {
   type BoostReplay,
   type BoostStats,
+  type BoostView,
+  buildBoostFromTrace,
   buildBoostStats,
   buildCatalog,
   buildHealth,
@@ -10,10 +12,14 @@ import {
   estimateSavings,
   type Health,
   type IntentGraphDocument,
+  listProjects,
+  type ProjectSummary,
   parseBoostReplay,
   parseIntentGraph,
+  projectFileName,
   type SavingsEstimate,
   type SessionTimeline,
+  scopeToProject,
   type TraceEvent,
   TraceTail,
 } from "@ratel-ai/burrow-model";
@@ -46,6 +52,12 @@ export interface LoadedGraph {
 export interface BurrowData {
   status: "loading" | "ready" | "unauthorized" | "offline";
   sources: Source[];
+  /** Every project (runtime source_id) in the traces, busiest first. */
+  projects: ProjectSummary[];
+  /** The selected project; every model below is scoped to it. */
+  project: string | null;
+  setProject: (id: string) => void;
+  /** The selected project's events. */
   events: TraceEvent[];
   badLines: number;
   catalog: Catalog;
@@ -53,7 +65,11 @@ export interface BurrowData {
   health: Health;
   savings: SavingsEstimate;
   boost: BoostStats;
+  /** Ratel Cloud's Boost view for the selected project (trace + launcher replay). */
+  boostView: BoostView;
   graphs: LoadedGraph[];
+  /** The selected project's intent graph: `intent-graphs/<project>.json`, else the shared one. */
+  projectGraph: LoadedGraph | null;
   snapshotError: string | null;
   /** The launcher's Boost replay (ADR 0005), or null when it has none. */
   replay: BoostReplay | null;
@@ -90,7 +106,26 @@ interface RawState {
   lastUpdated: number | null;
 }
 
+const PROJECT_KEY = "burrow.project";
+
+function rememberedProject(): string | null {
+  try {
+    return window.localStorage.getItem(PROJECT_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function BurrowProvider({ children }: { children: ReactNode }) {
+  const [chosenProject, setChosenProject] = useState<string | null>(rememberedProject);
+  const setProject = (id: string) => {
+    setChosenProject(id);
+    try {
+      window.localStorage.setItem(PROJECT_KEY, id);
+    } catch {
+      // a convenience only
+    }
+  };
   const tails = useRef(new Map<string, TraceTail>());
   const files = useRef(new Map<string, { size: number; mtime: number }>());
   const [raw, setRaw] = useState<RawState>({
@@ -209,32 +244,46 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Derived models are recomputed only when the data version moves.
+  // All events, recomputed only when the data version moves.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `raw.version` is the change signal for the tails held in refs.
-  const derived = useMemo(() => {
-    const all: TraceEvent[] = [];
+  const all = useMemo(() => {
+    const events: TraceEvent[] = [];
     let badLines = 0;
     for (const tail of tails.current.values()) {
-      for (const e of tail.events) all.push(e);
+      for (const e of tail.events) events.push(e);
       badLines += tail.badLines;
     }
-    all.sort((a, b) => a.ts - b.ts);
-    const catalog = buildCatalog(all, raw.snapshot);
+    events.sort((a, b) => a.ts - b.ts);
+    return { events, badLines, projects: listProjects(events) };
+  }, [raw.version]);
+
+  // The selected project: the remembered one if it still exists, else the busiest.
+  const project =
+    all.projects.find((p) => p.id === chosenProject)?.id ?? all.projects[0]?.id ?? null;
+
+  const derived = useMemo(() => {
+    const events = scopeToProject(all.events, project);
+    const catalog = buildCatalog(events, raw.snapshot);
     return {
-      events: all,
-      badLines,
+      events,
       catalog,
-      sessions: buildInspector(all),
-      health: buildHealth(all),
-      savings: estimateSavings(all, catalog),
-      boost: buildBoostStats(all),
+      sessions: buildInspector(events),
+      health: buildHealth(events),
+      savings: estimateSavings(events, catalog),
+      boost: buildBoostStats(events),
+      boostView: buildBoostFromTrace(events, { replay: raw.replay }),
     };
-  }, [raw.version, raw.snapshot]);
+  }, [all, project, raw.snapshot, raw.replay]);
 
   const value: BurrowData = {
     status: raw.status,
     sources: raw.sources,
+    projects: all.projects,
+    project,
+    setProject,
+    badLines: all.badLines,
     graphs: raw.graphs,
+    projectGraph: graphForProject(raw.graphs, project),
     snapshotError: raw.snapshotError,
     replay: raw.replay,
     replayError: raw.replayError,
@@ -242,4 +291,18 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
     ...derived,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+/** A project's own graph file wins; otherwise the dir's shared `intent-graph.json`, else the first. */
+function graphForProject(
+  graphs: readonly LoadedGraph[],
+  project: string | null,
+): LoadedGraph | null {
+  const own = project ? `/intent-graphs/${projectFileName(project)}` : null;
+  return (
+    (own ? graphs.find((g) => g.source.path.endsWith(own)) : undefined) ??
+    graphs.find((g) => g.source.path.endsWith("/intent-graph.json")) ??
+    graphs[0] ??
+    null
+  );
 }

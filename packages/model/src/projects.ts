@@ -38,3 +38,8 @@ export function scopeToProject(
 ): TraceEvent[] {
   return project === null ? [...events] : events.filter((e) => projectOf(e) === project);
 }
+
+/** A project's intent-graph file name (`intent-graphs/<this>`): unsafe characters become `_`. */
+export function projectFileName(project: string): string {
+  return `${project.replace(/[^A-Za-z0-9._-]/g, "_")}.json`;
+}

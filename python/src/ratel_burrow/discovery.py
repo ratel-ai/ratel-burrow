@@ -13,6 +13,8 @@ SourceKind = Literal["trace", "intent_graph", "catalog_snapshot"]
 
 BURROW_DIR = os.path.join(".ratel", "burrow")
 INTENT_GRAPH_FILE = "intent-graph.json"
+#: One intent graph per project: `intent-graphs/<project>.json`.
+INTENT_GRAPHS_DIR = "intent-graphs"
 CATALOG_SNAPSHOT_FILE = "catalog-snapshot.json"
 
 
@@ -78,6 +80,13 @@ def discover_sources(
         for p in [*_jsonl_in(root / "traces"), *_jsonl_in(root)]:
             add("trace", p, display(p))
         add("intent_graph", root / INTENT_GRAPH_FILE, display(root / INTENT_GRAPH_FILE))
+        for name in _list(root / INTENT_GRAPHS_DIR):
+            if name.endswith(".json"):
+                add(
+                    "intent_graph",
+                    root / INTENT_GRAPHS_DIR / name,
+                    display(root / INTENT_GRAPHS_DIR / name),
+                )
         add("catalog_snapshot", root / CATALOG_SNAPSHOT_FILE, display(root / CATALOG_SNAPSHOT_FILE))
 
     explicit = bool(dirs or traces or intent_graphs or catalogs)

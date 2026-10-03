@@ -33,6 +33,12 @@ describe("projects", () => {
     expect(scopeToProject(mixed(), null)).toHaveLength(4);
   });
 
+  it("names a project's intent-graph file safely", async () => {
+    const { projectFileName } = await import("../src/projects");
+    expect(projectFileName("billing-agent")).toBe("billing-agent.json");
+    expect(projectFileName("team/agent v2")).toBe("team_agent_v2.json");
+  });
+
   it("finds the fixtures' projects", () => {
     expect(listProjects(v2Events()).map((p) => p.id)).toEqual(["demo-agent"]);
     expect(listProjects(v1Events()).map((p) => p.id)).toEqual([DEFAULT_PROJECT]);

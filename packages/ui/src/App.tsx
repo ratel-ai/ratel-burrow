@@ -73,6 +73,7 @@ function Shell() {
             Ratel <span className="text-green">Burrow</span>
           </span>
         </a>
+        <ProjectSwitcher />
         <nav className="space-y-0.5">
           {NAV.map(({ page: p, label, icon: Icon }) => (
             <a
@@ -123,6 +124,43 @@ function Shell() {
           {page === "health" && <HealthScreen />}
         </div>
       </main>
+    </div>
+  );
+}
+
+/**
+ * The project every screen is scoped to: one runtime's source_id (`events.sourceId` /
+ * `OTEL_SERVICE_NAME` in the SDK), the local counterpart of a Ratel Cloud project.
+ */
+function ProjectSwitcher() {
+  const { projects, project, setProject } = useBurrow();
+  if (projects.length === 0) return null;
+  return (
+    <div className="mb-4 px-2">
+      <label htmlFor="burrow-project" className="eyebrow">
+        Project
+      </label>
+      {projects.length === 1 ? (
+        <div
+          className="mt-1 truncate font-mono text-sm text-cream"
+          title="This runtime's source_id"
+        >
+          {project}
+        </div>
+      ) : (
+        <select
+          id="burrow-project"
+          value={project ?? ""}
+          onChange={(e) => setProject(e.target.value)}
+          className="mt-1 w-full rounded-lg border border-forest-300 bg-base-deep/60 px-2 py-1.5 font-mono text-sm text-cream focus:border-green focus:outline-none"
+        >
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.id} · {p.events.toLocaleString("en-US")} events
+            </option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }

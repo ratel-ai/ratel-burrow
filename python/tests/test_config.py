@@ -30,3 +30,12 @@ def test_paths() -> None:
         "/x/catalog-snapshot.json",
     )
     assert burrow_paths().dir == str(Path.cwd() / ".ratel" / "burrow")
+
+
+def test_project_paths() -> None:
+    assert burrow_paths(dir="/x", project="billing-agent").intent_graph == (
+        "/x/intent-graphs/billing-agent.json"
+    )
+    assert burrow_paths(dir="/x", project="team/agent v2").intent_graph == (
+        "/x/intent-graphs/team_agent_v2.json"
+    )

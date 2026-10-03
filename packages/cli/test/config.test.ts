@@ -22,6 +22,18 @@ describe("burrowConfig", () => {
     expect(burrowPaths().dir).toBe(join(process.cwd(), ".ratel", "burrow"));
   });
 
+  it("names a project: the runtime's source_id, and the project's own intent graph", () => {
+    const dir = join(mkdtempSync(join(tmpdir(), "burrow-cfg-")), "b");
+    expect(burrowConfig({ dir, sessionId: "s", project: "billing-agent" }).events).toEqual({
+      sessionId: "s",
+      sourceId: "billing-agent",
+      experimentalCatalogDefinitions: true,
+    });
+    expect(burrowPaths({ dir: "/x", project: "billing-agent" }).intentGraph).toBe(
+      "/x/intent-graphs/billing-agent.json",
+    );
+  });
+
   it("names the intent graph and snapshot files the CLI discovers", () => {
     const paths = burrowPaths({ dir: "/x" });
     expect(paths).toEqual({

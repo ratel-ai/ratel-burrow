@@ -28,6 +28,8 @@ export interface DiscoveryOptions {
 
 export const BURROW_DIR = join(".ratel", "burrow");
 export const INTENT_GRAPH_FILE = "intent-graph.json";
+/** One intent graph per project: `intent-graphs/<project>.json`. */
+export const INTENT_GRAPHS_DIR = "intent-graphs";
 export const CATALOG_SNAPSHOT_FILE = "catalog-snapshot.json";
 
 export function sourceId(path: string): string {
@@ -77,6 +79,10 @@ export function discoverSources(options: DiscoveryOptions): Source[] {
     const abs = resolve(cwd, dir);
     for (const p of [...jsonlIn(join(abs, "traces")), ...jsonlIn(abs)]) add("trace", p, display(p));
     add("intent_graph", join(abs, INTENT_GRAPH_FILE), display(join(abs, INTENT_GRAPH_FILE)));
+    for (const name of list(join(abs, INTENT_GRAPHS_DIR)).filter((n) => n.endsWith(".json"))) {
+      const p = join(abs, INTENT_GRAPHS_DIR, name);
+      add("intent_graph", p, display(p));
+    }
     add(
       "catalog_snapshot",
       join(abs, CATALOG_SNAPSHOT_FILE),

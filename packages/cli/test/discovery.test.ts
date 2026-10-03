@@ -32,6 +32,18 @@ describe("discoverSources", () => {
     expect(sources[0]).toMatchObject({ size: 3 });
   });
 
+  it("finds one intent graph per project under intent-graphs/", () => {
+    const graphs = join(cwd, ".ratel", "burrow", "intent-graphs");
+    mkdirSync(graphs, { recursive: true });
+    writeFileSync(join(graphs, "billing-agent.json"), "{}");
+    writeFileSync(join(graphs, "support-agent.json"), "{}");
+    writeFileSync(join(graphs, "notes.txt"), "");
+    expect(discoverSources({ cwd }).map((s) => [s.kind, s.label])).toEqual([
+      ["intent_graph", ".ratel/burrow/intent-graphs/billing-agent.json"],
+      ["intent_graph", ".ratel/burrow/intent-graphs/support-agent.json"],
+    ]);
+  });
+
   it("replaces the default with explicit paths", () => {
     mkdirSync(join(cwd, ".ratel", "burrow", "traces"), { recursive: true });
     writeFileSync(join(cwd, ".ratel", "burrow", "traces", "ignored.jsonl"), "");

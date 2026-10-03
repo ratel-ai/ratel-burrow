@@ -57,3 +57,15 @@ def test_other_burrow_dirs(cwd: Path, tmp_path: Path) -> None:
 
 def test_nothing_found_is_empty(cwd: Path) -> None:
     assert discover_sources(cwd=cwd) == []
+
+
+def test_one_intent_graph_per_project(cwd: Path) -> None:
+    graphs = cwd / ".ratel" / "burrow" / "intent-graphs"
+    graphs.mkdir(parents=True)
+    (graphs / "billing-agent.json").write_text("{}")
+    (graphs / "support-agent.json").write_text("{}")
+    (graphs / "notes.txt").write_text("")
+    assert [(s.kind, s.label) for s in discover_sources(cwd=cwd)] == [
+        ("intent_graph", ".ratel/burrow/intent-graphs/billing-agent.json"),
+        ("intent_graph", ".ratel/burrow/intent-graphs/support-agent.json"),
+    ]

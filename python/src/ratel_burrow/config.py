@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import os
+import re
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .discovery import BURROW_DIR, CATALOG_SNAPSHOT_FILE, INTENT_GRAPH_FILE
+from .discovery import BURROW_DIR, CATALOG_SNAPSHOT_FILE, INTENT_GRAPH_FILE, INTENT_GRAPHS_DIR
 
 try:  # Use Ratel's own type when the SDK is installed; the catalog duck-types it anyway.
     from ratel_ai import TraceSinkConfig  # type: ignore[import-not-found, unused-ignore]
@@ -33,13 +34,24 @@ class BurrowPaths:
     catalog_snapshot: str
 
 
-def burrow_paths(dir: str | os.PathLike[str] | None = None) -> BurrowPaths:  # noqa: A002
+def project_file_name(project: str) -> str:
+    """A project's intent-graph file name (`projectFileName` in the model)."""
+    return re.sub(r"[^A-Za-z0-9._-]", "_", project) + ".json"
+
+
+def burrow_paths(
+    dir: str | os.PathLike[str] | None = None,  # noqa: A002
+    project: str | None = None,
+) -> BurrowPaths:
+    """Where Burrow looks. With `project` (the runtime's source_id, `OTEL_SERVICE_NAME` in
+    Python), the intent graph is that project's own file, as Ratel Cloud keeps one per project."""
     d = Path(dir) if dir is not None else Path.cwd() / BURROW_DIR
     d = d if d.is_absolute() else Path.cwd() / d
+    graph = d / INTENT_GRAPHS_DIR / project_file_name(project) if project else d / INTENT_GRAPH_FILE
     return BurrowPaths(
         dir=str(d),
         traces=str(d / "traces"),
-        intent_graph=str(d / INTENT_GRAPH_FILE),
+        intent_graph=str(graph),
         catalog_snapshot=str(d / CATALOG_SNAPSHOT_FILE),
     )
 
