@@ -4,12 +4,17 @@ import {
   type ImprovementExample,
   plural,
 } from "@ratel-ai/burrow-model";
-import { ArrowDownWideNarrow, CircleOff, Lightbulb, SearchX, TriangleAlert } from "lucide-react";
+import {
+  ArrowDownWideNarrow,
+  ChevronRight,
+  CircleOff,
+  Lightbulb,
+  SearchX,
+  TriangleAlert,
+} from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { href } from "../lib/route";
 import { Card, Code, cx } from "./ui";
-
-const SHOWN = 4;
 
 const ICON = {
   missed: SearchX,
@@ -26,7 +31,29 @@ const TONE = {
   never_retrieved: "text-warm-muted",
 };
 
-/** Patterns in this project's trace that point at a concrete fix, most actionable first. */
+type Kind = Improvement["kind"];
+
+/** What to change, said once per suggestion. */
+const FIX: Record<Kind, ReactNode> = {
+  missed: (
+    <>
+      Their searchable descriptions don't match how your agent asks. Add the words its queries use,
+      with <Code>experimentalSearchableDescription</Code>.
+    </>
+  ),
+  buried:
+    "Make their searchable descriptions more specific, or turn on adaptive ranking so they're promoted for asks like these.",
+  empty_searches:
+    "The agent asked for something no entry matches: a missing capability, or one registered after the search ran.",
+  failing: "Not a ranking problem, but each failure costs the agent a turn.",
+  never_retrieved:
+    "Remove them if the agent doesn't need them, or rewrite their searchable descriptions in the words your agent uses.",
+};
+
+/**
+ * Patterns in this project's trace that point at a concrete fix: one row per
+ * suggestion, opening to the tools and example queries behind it.
+ */
 export function Improvements({
   items,
   searches,
@@ -36,40 +63,134 @@ export function Improvements({
   searches: number;
   className?: string;
 }) {
-  const [all, setAll] = useState(false);
+  const [open, setOpen] = useState<Kind | null>(null);
   if (searches === 0) return null;
-  const shown = all ? items : items.slice(0, SHOWN);
+  const groups: { kind: Kind; items: Improvement[] }[] = [];
+  for (const item of items) {
+    const last = groups.at(-1);
+    if (last?.kind === item.kind) last.items.push(item);
+    else groups.push({ kind: item.kind, items: [item] });
+  }
   return (
     <Card
       title="What to improve"
-      hint="Patterns in your trace, each with what to change. Read from the searches and calls above."
+      hint="Suggestions from your trace. Open one to see the tools and searches behind it."
       className={className}
     >
-      {items.length === 0 ? (
+      {groups.length === 0 ? (
         <p className="flex items-center gap-2 text-sm text-cream-dim">
           <Lightbulb className="size-4 text-green" strokeWidth={1.7} aria-hidden />
           Nothing stands out: called tools were in the results, and no search came back empty.
         </p>
       ) : (
-        <>
-          <ul className="divide-y divide-forest-300/50">
-            {shown.map((item, i) => (
-              <Row key={keyOf(item)} item={item} showFix={shown[i - 1]?.kind !== item.kind} />
-            ))}
-          </ul>
-          {items.length > SHOWN ? (
-            <button
-              type="button"
-              onClick={() => setAll((v) => !v)}
-              className="mt-2 text-xs text-green hover:underline"
-            >
-              {all ? "Show fewer" : `Show all ${items.length}`}
-            </button>
-          ) : null}
-        </>
+        <ul className="divide-y divide-forest-300/50">
+          {groups.map((group) => (
+            <Group
+              key={group.kind}
+              kind={group.kind}
+              items={group.items}
+              open={open === group.kind}
+              onToggle={() => setOpen((k) => (k === group.kind ? null : group.kind))}
+            />
+          ))}
+        </ul>
       )}
     </Card>
   );
+}
+
+function Group({
+  kind,
+  items,
+  open,
+  onToggle,
+}: {
+  kind: Kind;
+  items: Improvement[];
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const Icon = ICON[kind];
+  const first = items[0];
+  if (!first) return null;
+  const { title, count } = summarize(kind, items);
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="flex w-full items-start gap-3 rounded-lg py-3 text-left transition-colors hover:bg-forest-300/15"
+      >
+        <Icon className={cx("mt-0.5 size-4 shrink-0", TONE[kind])} strokeWidth={1.7} aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm text-cream">{title}</p>
+          <p className="mt-0.5 text-xs leading-5 text-warm-muted">{FIX[kind]}</p>
+        </div>
+        <span className="mt-0.5 shrink-0 font-mono text-xs text-warm-muted tabular">{count}</span>
+        <ChevronRight
+          className={cx(
+            "mt-0.5 size-4 shrink-0 text-warm-muted transition-transform",
+            open && "rotate-90",
+          )}
+          aria-hidden
+        />
+      </button>
+      {open ? (
+        <ul className="mb-3 ml-7 divide-y divide-forest-300/40 rounded-lg border border-forest-300/50 bg-base-deep/30 px-3">
+          {items.map((item) => (
+            <Row key={keyOf(item)} item={item} />
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
+/** Tools, skills, or both: the noun a group's headline counts. */
+function noun(items: Improvement[]): string {
+  const caps = new Set(items.map((i) => ("capability" in i ? i.capability : "tool")));
+  return caps.size === 1 ? ([...caps][0] ?? "tool") : "entry";
+}
+
+function summarize(kind: Kind, items: Improvement[]): { title: string; count: string } {
+  const n = noun(items);
+  const many = n === "entry" ? "entries" : `${n}s`;
+  const sum = (f: (i: Improvement) => number) => items.reduce((t, i) => t + f(i), 0);
+  switch (kind) {
+    case "missed":
+      return {
+        title: `${plural(items.length, n, many)} called after a search that didn't return ${items.length === 1 ? "it" : "them"}`,
+        count: plural(
+          sum((i) => (i.kind === "missed" ? i.missed : 0)),
+          "call",
+        ),
+      };
+    case "buried":
+      return {
+        title: `${plural(items.length, n, many)} usually ranked below the top 3`,
+        count: plural(
+          sum((i) => (i.kind === "buried" ? i.low : 0)),
+          "call",
+        ),
+      };
+    case "empty_searches": {
+      const c = sum((i) => (i.kind === "empty_searches" ? i.count : 0));
+      return { title: `${plural(c, "search", "searches")} returned nothing`, count: "" };
+    }
+    case "failing":
+      return {
+        title: `${plural(items.length, n, many)} failing often`,
+        count: plural(
+          sum((i) => (i.kind === "failing" ? i.errors : 0)),
+          "failure",
+        ),
+      };
+    case "never_retrieved": {
+      const c = sum((i) => (i.kind === "never_retrieved" ? i.ids.length : 0));
+      return { title: `${plural(c, n, many)} never returned by any search`, count: "" };
+    }
+  }
 }
 
 function keyOf(item: Improvement): string {
@@ -78,19 +199,12 @@ function keyOf(item: Improvement): string {
     : `${item.kind}:${"capability" in item ? item.capability : ""}`;
 }
 
-function Row({ item, showFix }: { item: Improvement; showFix: boolean }) {
-  const Icon = ICON[item.kind];
-  const { title, fix, examples, chips } = describe(item);
+function Row({ item }: { item: Improvement }) {
+  const { title, examples, chips } = describe(item);
   return (
-    <li className="flex gap-3 py-3">
-      <Icon
-        className={cx("mt-0.5 size-4 shrink-0", TONE[item.kind])}
-        strokeWidth={1.7}
-        aria-hidden
-      />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm text-cream">{title}</p>
-        {showFix ? <p className="mt-0.5 text-xs leading-5 text-warm-muted">{fix}</p> : null}
+    <li className="py-2.5">
+      <div className="min-w-0">
+        <p className="text-sm text-cream-dim">{title}</p>
         {examples?.length ? (
           <ul className="mt-1.5 flex flex-wrap gap-1.5">
             {examples.map((e) => (
