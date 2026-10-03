@@ -53,6 +53,14 @@ Ratel Cloud does.
 Want to see every screen with data first? Run the example agent:
 `pnpm --filter @ratel-ai/burrow-example-ts-sdk start`, then `ratel-burrow` in `examples/ts-sdk`.
 
+## Projects
+
+Like Ratel Cloud, Burrow keeps each project apart. A project is a runtime's `source_id`, which the
+SDK takes from `OTEL_SERVICE_NAME`. `burrowConfig({ project: "billing-agent" })` (Python:
+`burrow_config(project="billing-agent")`) sets it when unset and gives the project its own intent
+graph (`burrowPaths({ project }).intentGraph`). Pick a project in the sidebar; every screen is
+scoped to it. `#/overview?project=<id>` links straight to one.
+
 ## How it works
 
 Burrow's launcher (Node or Python) only finds files and serves them raw, on `127.0.0.1`,
