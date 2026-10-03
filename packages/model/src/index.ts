@@ -7,6 +7,7 @@ export * from "./boost/replay.js";
 export * from "./boost/selections.js";
 export * from "./boost/view.js";
 export * from "./catalog.js";
+export * from "./catalog-table.js";
 export * from "./events.js";
 export * from "./flow.js";
 export * from "./format.js";

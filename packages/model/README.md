@@ -9,6 +9,8 @@ the browser (the UI bundles it) and in tests.
 | `src/invocations.ts` | `collectInvocations`: one record per tool/skill call, deduplicated across event families |
 | `src/catalog.ts` | `buildCatalog`: tools / skills / facts from `catalog_definition` events or a snapshot file |
 | `src/inspector.ts` | `buildInspector`: per-session searches with hits, stages, boosts and the calls they led to |
+| `src/catalog-table.ts` | filter / sort / paging for the catalog table, ported from Ratel Cloud's `table-view` |
+| `src/agent-health/` | `buildAgentHealth`: Ratel Cloud's health band (first try, detours, junk, wasted calls) and turn shapes from the trace |
 | `src/health.ts` | `buildHealth`: latency, errors, MCP servers, auth, embedders, dropped events |
 | `src/savings.ts` | `estimateSavings`: estimated tokens saved vs. sending the full catalog |
 | `src/adaptive.ts` | `buildBoostStats`: match rate and promotions (Overview) |

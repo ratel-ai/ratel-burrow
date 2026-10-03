@@ -1,324 +1,272 @@
 import {
   type CatalogEntry,
-  estimateTokens,
+  type CatalogView,
+  catalogTableParams,
+  definitionTokens,
   formatCount,
-  formatMs,
-  relativeTime,
+  resolveCatalogView,
 } from "@ratel-ai/burrow-model";
-import { useMemo, useState } from "react";
 import {
-  Card,
-  Code,
-  Drawer,
-  Empty,
-  Field,
-  KindDot,
-  PageHeader,
-  Pill,
-  Pre,
-  SearchInput,
-  Tabs,
-} from "../components/ui";
+  ArrowUpRight,
+  BookOpen,
+  Database,
+  Hash,
+  type LucideIcon,
+  Parentheses,
+  RadioTower,
+  Search,
+  Wrench,
+} from "lucide-react";
+import { CatalogTable } from "../components/catalog/CatalogTable";
+import { EntryModal } from "../components/catalog/EntryModal";
+import { Code } from "../components/ui";
 import { useBurrow } from "../lib/data";
-import { href, navigate, useRoute } from "../lib/route";
+import { href, useRoute } from "../lib/route";
 
-type Tab = "tools" | "skills" | "facts";
-type SortKey = "name" | "retrieved" | "invoked" | "latency" | "lastSeen";
+type Kind = "tools" | "skills" | "facts";
+
+const KINDS: Record<
+  Kind,
+  {
+    title: string;
+    noun: string;
+    eyebrow: string;
+    description: string;
+    icon: LucideIcon;
+    callsLabel: string;
+  }
+> = {
+  skills: {
+    title: "Skills",
+    noun: "skill",
+    eyebrow: "Instruction catalog",
+    description: "The playbooks your agent retrieves, with how often each was found and loaded.",
+    icon: BookOpen,
+    callsLabel: "Loads",
+  },
+  tools: {
+    title: "Tools",
+    noun: "tool",
+    eyebrow: "Capability catalog",
+    description:
+      "Every tool Ratel can rank, joined with how your agent searched for and called it.",
+    icon: Wrench,
+    callsLabel: "Calls",
+  },
+  facts: {
+    title: "Facts",
+    noun: "fact",
+    eyebrow: "Knowledge catalog",
+    description: "Durable facts your agent can retrieve, and how often each was injected.",
+    icon: Database,
+    callsLabel: "Injected",
+  },
+};
 
 export function CatalogScreen() {
-  const { catalog } = useBurrow();
   const { params } = useRoute();
-  const tab = (
-    ["tools", "skills", "facts"].includes(params.get("tab") ?? "") ? params.get("tab") : "tools"
-  ) as Tab;
+  const tab = params.get("tab");
+  return tab === "tools" || tab === "skills" || tab === "facts" ? (
+    <CatalogPage kind={tab} params={params} />
+  ) : (
+    <CatalogIndex />
+  );
+}
+
+/** Ratel Cloud's catalog index: one card per catalog. */
+function CatalogIndex() {
+  const { catalog, project } = useBurrow();
+  return (
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-7">
+      <header className="border-b border-forest-300 pb-7">
+        <div className="eyebrow">Capabilities</div>
+        <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-cream">
+          Catalogs
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-warm-muted">
+          What your agent can retrieve{project ? ` in ${project}` : ""}: the exact text Ratel ranks,
+          and how each entry has been used.
+        </p>
+      </header>
+      <section aria-label="Project catalogs" className="grid gap-3 md:grid-cols-3">
+        {(["skills", "tools", "facts"] as const).map((kind) => {
+          const meta = KINDS[kind];
+          const Icon = meta.icon;
+          return (
+            <a
+              key={kind}
+              href={href("catalog", { tab: kind })}
+              aria-label={`Open ${meta.title} catalog`}
+              className="group relative flex min-h-64 flex-col overflow-hidden rounded-2xl border border-forest-300 bg-forest-600/50 p-5 transition-[border-color,background-color,transform] duration-300 hover:-translate-y-0.5 hover:border-coral/35 hover:bg-forest-600/75"
+            >
+              <div
+                className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-coral/0 to-transparent transition-colors group-hover:via-coral/70"
+                aria-hidden
+              />
+              <div className="flex items-start justify-between gap-4">
+                <span className="flex size-10 items-center justify-center rounded-xl border border-forest-300 bg-base-deep/55 text-coral transition-colors group-hover:border-coral/30 group-hover:bg-coral/10">
+                  <Icon className="size-[18px]" strokeWidth={1.6} aria-hidden />
+                </span>
+                <ArrowUpRight
+                  className="size-4 text-warm-muted/45 transition-[color,transform] group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-cream"
+                  aria-hidden
+                />
+              </div>
+              <div className="mt-8">
+                <p className="font-mono text-[9px] uppercase tracking-[0.13em] text-warm-muted">
+                  {meta.eyebrow}
+                </p>
+                <h2 className="mt-2 font-display text-2xl font-semibold tracking-tight text-cream">
+                  {meta.title}
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-warm-muted">{meta.description}</p>
+              </div>
+              <div className="mt-auto flex items-end justify-between gap-3 border-t border-forest-300/60 pt-5">
+                <span className="font-display text-4xl font-semibold leading-none tracking-tight text-cream tabular">
+                  {formatCount(catalog[kind].length)}
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-warm-muted">
+                  seen
+                </span>
+              </div>
+            </a>
+          );
+        })}
+      </section>
+    </div>
+  );
+}
+
+function CatalogPage({ kind, params }: { kind: Kind; params: URLSearchParams }) {
+  const { catalog, project } = useBurrow();
+  const meta = KINDS[kind];
+  const entries = catalog[kind];
+  const view = resolveCatalogView(Object.fromEntries(params));
   const selectedId = params.get("id");
-  const [query, setQuery] = useState(params.get("q") ?? "");
-  const [sort, setSort] = useState<SortKey>("invoked");
-  const entries = catalog[tab];
-
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = q
-      ? entries.filter((e) =>
-          [e.id, e.name, e.description, e.searchableDescription, e.server ?? "", ...e.tags]
-            .join(" ")
-            .toLowerCase()
-            .includes(q),
-        )
-      : entries;
-    const key = (e: CatalogEntry): number | string => {
-      switch (sort) {
-        case "name":
-          return e.name.toLowerCase();
-        case "retrieved":
-          return -e.stats.retrieved;
-        case "invoked":
-          return -e.stats.invoked;
-        case "latency":
-          return -(e.stats.avgLatencyMs ?? -1);
-        case "lastSeen":
-          return -(e.lastSeen ?? 0);
-      }
-    };
-    return [...filtered].sort((a, b) => {
-      const ka = key(a);
-      const kb = key(b);
-      return ka < kb ? -1 : ka > kb ? 1 : a.id < b.id ? -1 : 1;
-    });
-  }, [entries, query, sort]);
-
   const selected = selectedId ? (entries.find((e) => e.id === selectedId) ?? null) : null;
-  const now = Date.now();
-  const singular = tab.slice(0, -1);
+
+  const go = (next: CatalogView, extra: Record<string, string> = {}, replace = false) => {
+    const target = href("catalog", { tab: kind, ...catalogTableParams(next), ...extra });
+    if (replace) window.location.replace(target);
+    else window.location.hash = target;
+  };
+  const update = (patch: Partial<CatalogView>, replace = false) => {
+    const merged = { ...view, ...patch };
+    go({ ...merged, offset: (merged.page - 1) * merged.pageSize }, {}, replace);
+  };
+
+  const totals = entries.reduce(
+    (sum, e) => ({
+      calls: sum.calls + e.stats.invoked,
+      retrieved: sum.retrieved + e.stats.retrieved,
+      tokens: sum.tokens + (e.removed ? 0 : (definitionTokens(e) ?? 0)),
+    }),
+    { calls: 0, retrieved: 0, tokens: 0 },
+  );
 
   return (
-    <div>
-      <PageHeader eyebrow="Catalog" title="Tools, skills and facts">
-        Everything Ratel can rank for your agent, with the exact text it searches over and how each
-        entry has been used.
-      </PageHeader>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+      <div className="flex flex-col gap-5">
+        <a
+          href={href("catalog")}
+          className="inline-flex w-fit items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-warm-muted transition-colors hover:text-cream"
+        >
+          <span aria-hidden>←</span>
+          All catalogs
+        </a>
+        <header className="flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <div className="eyebrow">{meta.title.slice(0, -1)} catalog</div>
+            <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-cream">
+              {meta.title}
+            </h1>
+            <p className="mt-1.5 max-w-2xl text-sm text-warm-muted">
+              {meta.description}
+              {project ? ` Project ${project}.` : ""}
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-forest-300 bg-forest-600/55 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.09em] text-cream-dim">
+            <span className="size-1.5 rounded-full bg-green" aria-hidden />
+            Live from traces
+          </span>
+        </header>
+      </div>
+
+      <section
+        aria-label={`${meta.title} totals`}
+        className="grid gap-px overflow-hidden rounded-xl border border-forest-300 bg-forest-300 sm:grid-cols-2 lg:grid-cols-4"
+      >
+        <SummaryDatum icon={meta.icon} label={meta.title} value={formatCount(entries.length)} />
+        <SummaryDatum
+          icon={Parentheses}
+          label={meta.callsLabel}
+          value={formatCount(totals.calls)}
+        />
+        <SummaryDatum icon={Search} label="Retrieved" value={formatCount(totals.retrieved)} />
+        <SummaryDatum
+          icon={Hash}
+          label="Definition tokens"
+          value={catalog.hasDefinitions ? `~${formatCount(totals.tokens)}` : "–"}
+        />
+      </section>
 
       {!catalog.hasDefinitions && entries.length > 0 ? (
-        <div className="mb-4 rounded-lg border border-amber/40 bg-amber/5 px-4 py-2.5 text-xs text-cream-dim">
+        <p className="rounded-lg border border-amber/40 bg-amber/5 px-4 py-2.5 text-xs text-cream-dim">
           Only ids are known: descriptions and schemas were not recorded. Turn on catalog
           definitions with <Code>burrowConfig()</Code> (it sets{" "}
           <Code>events.experimentalCatalogDefinitions</Code>) or save{" "}
           <Code>catalog.snapshot()</Code> to <Code>.ratel/burrow/catalog-snapshot.json</Code>.
-        </div>
+        </p>
       ) : null}
 
-      <Card>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <Tabs<Tab>
-            value={tab}
-            onChange={(t) => navigate("catalog", { tab: t })}
-            options={(["tools", "skills", "facts"] as const).map((t) => ({
-              value: t,
-              label: (
-                <>
-                  <KindDot kind={t.slice(0, -1) as "tool" | "skill" | "fact"} />
-                  <span className="capitalize">{t}</span>
-                  <span className="font-mono text-xs text-warm-muted">{catalog[t].length}</span>
-                </>
-              ),
-            }))}
-          />
-          <SearchInput value={query} onChange={setQuery} placeholder={`Filter ${tab}…`} />
-        </div>
-
-        {entries.length === 0 ? (
-          <Empty title={`No ${tab} seen yet`}>
-            {tab === "facts"
+      {entries.length === 0 ? (
+        <section className="rounded-2xl border border-dashed border-forest-300 bg-forest-600/20 px-6 py-10 text-center">
+          <RadioTower className="mx-auto size-5 text-coral" strokeWidth={1.6} aria-hidden />
+          <h2 className="mt-4 font-display text-lg font-semibold text-cream">
+            No {meta.noun}s seen yet
+          </h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-warm-muted">
+            {kind === "facts"
               ? "Facts appear once a FactCatalog emits definitions, searches or injections."
-              : `${singular[0]?.toUpperCase()}${singular.slice(1)}s appear once Ratel registers or ranks them.`}
-          </Empty>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-forest-300/70">
-                  <Th onClick={() => setSort("name")} active={sort === "name"}>
-                    Name
-                  </Th>
-                  <Th onClick={() => setSort("retrieved")} active={sort === "retrieved"} right>
-                    Retrieved
-                  </Th>
-                  <Th onClick={() => setSort("invoked")} active={sort === "invoked"} right>
-                    {tab === "facts" ? "Injected" : "Calls"}
-                  </Th>
-                  <Th right>Errors</Th>
-                  <Th onClick={() => setSort("latency")} active={sort === "latency"} right>
-                    Avg latency
-                  </Th>
-                  <Th onClick={() => setSort("lastSeen")} active={sort === "lastSeen"} right>
-                    Last seen
-                  </Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((e) => (
-                  <tr
-                    key={e.id}
-                    className="cursor-pointer border-b border-forest-300/40 hover:bg-forest-300/25"
-                    onClick={() => navigate("catalog", { tab, id: e.id })}
-                  >
-                    <td className="max-w-md py-2.5 pr-4">
-                      <div className="flex items-center gap-2">
-                        <KindDot kind={e.kind} />
-                        <span className="truncate font-mono text-[13px] text-cream">{e.name}</span>
-                        {e.server ? <Pill>{e.server}</Pill> : null}
-                        {e.removed ? <Pill tone="coral">removed</Pill> : null}
-                        {e.searchableOverridden ? (
-                          <Pill tone="amber" title="Search ranks an override, not the description">
-                            override
-                          </Pill>
-                        ) : null}
-                      </div>
-                      {e.description ? (
-                        <div className="mt-0.5 truncate pl-4 text-xs text-warm-muted">
-                          {e.description}
-                        </div>
-                      ) : null}
-                    </td>
-                    <Td>{formatCount(e.stats.retrieved)}</Td>
-                    <Td>{formatCount(e.stats.invoked)}</Td>
-                    <Td>
-                      {e.stats.errors ? <span className="text-coral">{e.stats.errors}</span> : "0"}
-                    </Td>
-                    <Td>{formatMs(e.stats.avgLatencyMs)}</Td>
-                    <Td>{relativeTime(e.lastSeen, now)}</Td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {rows.length === 0 ? (
-              <p className="py-6 text-center text-sm text-warm-muted">Nothing matches “{query}”.</p>
-            ) : null}
-          </div>
-        )}
-      </Card>
-
-      <Drawer
-        open={selected !== null}
-        onClose={() => navigate("catalog", { tab })}
-        title={
-          selected ? (
-            <div>
-              <div className="eyebrow flex items-center gap-2">
-                <KindDot kind={selected.kind} /> {selected.kind}
-              </div>
-              <div className="mt-1 break-all font-mono text-base text-cream">{selected.name}</div>
-              {selected.name !== selected.id ? (
-                <div className="font-mono text-xs text-warm-muted">{selected.id}</div>
-              ) : null}
-            </div>
-          ) : null
-        }
-      >
-        {selected ? <EntryDetail entry={selected} /> : null}
-      </Drawer>
-    </div>
-  );
-}
-
-function EntryDetail({ entry }: { entry: CatalogEntry }) {
-  const now = Date.now();
-  const tokens = estimateTokens(
-    `${entry.name}\n${entry.description}\n${JSON.stringify(entry.inputSchema ?? {})}`,
-  );
-  return (
-    <>
-      <div className="grid grid-cols-3 gap-3">
-        <Stat label="Retrieved" value={formatCount(entry.stats.retrieved)} />
-        <Stat
-          label={entry.kind === "fact" ? "Injected" : "Calls"}
-          value={formatCount(entry.stats.invoked)}
-        />
-        <Stat label="Errors" value={String(entry.stats.errors)} />
-        <Stat label="Avg latency" value={formatMs(entry.stats.avgLatencyMs)} />
-        <Stat label="p95 latency" value={formatMs(entry.stats.p95LatencyMs)} />
-        <Stat label="Last seen" value={relativeTime(entry.lastSeen, now)} />
-      </div>
-      {!entry.defined ? (
-        <p className="text-xs text-warm-muted">Definition not recorded: only the id is known.</p>
+              : `${meta.title} appear once Ratel registers or ranks them.`}
+          </p>
+        </section>
       ) : (
-        <>
-          <Field label="Description (what the model sees)">
-            {entry.description || <em className="text-warm-muted">empty</em>}
-          </Field>
-          <Field label="Searchable text (what Ratel ranks)">
-            <div className="flex flex-wrap items-center gap-2">
-              {entry.searchableOverridden ? (
-                <Pill tone="amber">override</Pill>
-              ) : (
-                <Pill>derived</Pill>
-              )}
-              <span className="text-xs text-warm-muted">
-                ~{tokens} tokens in context when exposed
-              </span>
-            </div>
-            <div className="mt-2">
-              <Pre value={entry.searchableDescription || "(empty)"} />
-            </div>
-          </Field>
-          {entry.tags.length ? (
-            <Field label="Tags">
-              <div className="flex flex-wrap gap-1.5">
-                {entry.tags.map((t) => (
-                  <Pill key={t}>{t}</Pill>
-                ))}
-              </div>
-            </Field>
-          ) : null}
-          {entry.kind === "tool" ? (
-            <>
-              <Field label="Input schema">
-                <Pre value={entry.inputSchema ?? {}} />
-              </Field>
-              <Field label="Output schema">
-                <Pre value={entry.outputSchema ?? {}} />
-              </Field>
-            </>
-          ) : null}
-          {entry.contentHash ? (
-            <Field label="Content hash">
-              <span className="break-all font-mono text-xs text-warm-muted">
-                {entry.contentHash}
-              </span>
-            </Field>
-          ) : null}
-        </>
+        <CatalogTable
+          noun={meta.noun}
+          callsLabel={meta.callsLabel}
+          entries={entries}
+          view={view}
+          onChange={update}
+          onOpen={(entry: CatalogEntry) => go(view, { id: entry.id })}
+        />
       )}
-      {entry.kind === "tool" ? (
-        <a
-          className="inline-block text-xs text-green hover:underline"
-          href={href("inspector", { tool: entry.id })}
-        >
-          See searches that called this tool →
-        </a>
-      ) : null}
-    </>
-  );
-}
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-forest-300/60 bg-base-deep/30 px-3 py-2">
-      <div className="eyebrow">{label}</div>
-      <div className="mt-0.5 font-mono text-sm text-cream">{value}</div>
+      {selected ? <EntryModal entry={selected} onClose={() => go(view)} /> : null}
     </div>
   );
 }
 
-function Th({
-  children,
-  onClick,
-  active,
-  right,
+function SummaryDatum({
+  icon: Icon,
+  label,
+  value,
 }: {
-  children: React.ReactNode;
-  onClick?: () => void;
-  active?: boolean;
-  right?: boolean;
+  icon: LucideIcon;
+  label: string;
+  value: string;
 }) {
   return (
-    <th className={`eyebrow py-2 pr-4 font-normal ${right ? "text-right" : ""}`}>
-      {onClick ? (
-        <button
-          type="button"
-          onClick={onClick}
-          className={`uppercase tracking-[0.06em] ${active ? "text-cream" : "hover:text-cream"}`}
-        >
-          {children}
-          {active ? " ↓" : ""}
-        </button>
-      ) : (
-        children
-      )}
-    </th>
+    <div className="flex min-h-20 items-center gap-3 bg-base-deep p-4">
+      <Icon className="size-4 shrink-0 text-warm-muted" strokeWidth={1.6} aria-hidden />
+      <div>
+        <div className="font-mono text-[9px] uppercase tracking-[0.09em] text-warm-muted">
+          {label}
+        </div>
+        <div className="mt-1 font-display text-2xl font-semibold leading-none text-cream tabular">
+          {value}
+        </div>
+      </div>
+    </div>
   );
-}
-
-function Td({ children }: { children: React.ReactNode }) {
-  return <td className="py-2.5 pr-4 text-right font-mono text-xs text-cream-dim">{children}</td>;
 }
