@@ -72,15 +72,11 @@ export function Improvements({
     else groups.push({ kind: item.kind, items: [item] });
   }
   return (
-    <Card
-      title="What to improve"
-      hint="Suggestions from your trace. Open one to see the tools and searches behind it."
-      className={className}
-    >
+    <Card title="What to improve" className={className}>
       {groups.length === 0 ? (
         <p className="flex items-center gap-2 text-sm text-cream-dim">
           <Lightbulb className="size-4 text-green" strokeWidth={1.7} aria-hidden />
-          Nothing stands out: called tools were in the results, and no search came back empty.
+          Nothing stands out.
         </p>
       ) : (
         <ul className="divide-y divide-forest-300/50">
@@ -125,7 +121,6 @@ function Group({
         <Icon className={cx("mt-0.5 size-4 shrink-0", TONE[kind])} strokeWidth={1.7} aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="text-sm text-cream">{title}</p>
-          <p className="mt-0.5 text-xs leading-5 text-warm-muted">{FIX[kind]}</p>
         </div>
         <span className="mt-0.5 shrink-0 font-mono text-xs text-warm-muted tabular">{count}</span>
         <ChevronRight
@@ -136,6 +131,7 @@ function Group({
           aria-hidden
         />
       </button>
+      {open ? <p className="mb-2 ml-7 text-xs leading-5 text-warm-muted">{FIX[kind]}</p> : null}
       {open ? (
         <ul className="mb-3 ml-7 divide-y divide-forest-300/40 rounded-lg border border-forest-300/50 bg-base-deep/30 px-3">
           {items.map((item) => (

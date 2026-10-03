@@ -4,11 +4,12 @@ import {
   formatBytes,
   formatCount,
   formatPercent,
+  plural,
   type RatelFlow,
   relativeTime,
 } from "@ratel-ai/burrow-model";
 import { ArrowRight, FileJson, FileText, Network, Repeat } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Improvements } from "../components/Improvements";
 import { BurrowMascot } from "../components/Mascot";
 import { Card, Code, cx, Empty, KindDot, Pill } from "../components/ui";
@@ -46,11 +47,11 @@ export function OverviewScreen() {
 
   return (
     <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-2xl border border-forest-300/60 bg-forest-600/60 px-6 py-4">
+      <section className="relative overflow-hidden rounded-2xl border border-forest-300/60 bg-forest-600/60 px-5 py-3">
         <div className="pixel-grid pixel-grid-fade pointer-events-none absolute inset-0 opacity-60" />
         <div className="relative flex flex-wrap items-center gap-6">
           <BurrowMascot
-            className="w-44 shrink-0"
+            className="w-32 shrink-0"
             title="A honey badger peering out of its burrow"
           />
           <div className="min-w-64 flex-1">
@@ -58,11 +59,7 @@ export function OverviewScreen() {
             <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
               See what Ratel is doing.
             </h1>
-            <p className="mt-1 max-w-xl text-sm leading-relaxed text-cream-dim/80">
-              The free, local view of what Ratel Cloud shows: your catalog, every search and the
-              call it led to, and what adaptive ranking learned. Read-only, from the files Ratel
-              already writes.
-            </p>
+            <p className="mt-1 text-sm text-warm-muted">Local and read-only.</p>
           </div>
         </div>
       </section>
@@ -111,7 +108,7 @@ export function OverviewScreen() {
             </ul>
           )}
         </Card>
-        <Sources className="lg:col-span-2" />
+        <Sources className="self-start lg:col-span-2" />
       </div>
     </div>
   );
@@ -119,81 +116,49 @@ export function OverviewScreen() {
 
 const pct = (n: number, of: number) => (of > 0 ? formatPercent(n / of) : "–");
 
-/**
- * What Ratel does for one request, as five steps with this project's numbers.
- * Each step is a screen here and a page in Ratel Cloud.
- */
+/** What Ratel does for one request, as five steps with this project's numbers. */
 function HowRatelWorks({ flow }: { flow: RatelFlow }) {
   const { catalog, search, call, learn, boost } = flow;
   return (
     <section>
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h2 className="text-base font-semibold">How Ratel works, in this project</h2>
-        <span className="text-xs text-warm-muted">one request, from catalog to boost</span>
-      </div>
+      <h2 className="mb-2 text-base font-semibold">How Ratel works</h2>
       <ol className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
         <Step
-          n={1}
           title="Catalog"
           page="catalog"
           value={`${formatCount(catalog.tools)} tools`}
-          detail={`${catalog.skills} skills · ${catalog.facts} facts${catalog.defined ? "" : " · ids only"}`}
-        >
-          What your agent could use; the model never sees the whole list.
-        </Step>
+          detail={
+            catalog.skills || catalog.facts
+              ? `${catalog.skills} skills · ${catalog.facts} facts`
+              : undefined
+          }
+          hint="What your agent could use; the model never sees the whole list."
+        />
         <Step
-          n={2}
           title="Search"
           page="inspector"
           value={`${formatCount(search.searches)} searches`}
-          detail={
-            search.searches
-              ? `returns ${search.avgReturned.toFixed(1)} of ${search.catalogSize} tools${
-                  search.tokensSavedPerSearch
-                    ? ` · ~${formatCount(search.tokensSavedPerSearch)} tokens kept out`
-                    : ""
-                }`
-              : "none yet"
-          }
-        >
-          Ratel ranks the catalog and hands the model the top few.
-        </Step>
+          detail={search.searches ? `top ${search.avgReturned.toFixed(1)} returned` : undefined}
+          hint="Ratel ranks the catalog and hands the model the top few."
+        />
         <Step
-          n={3}
           title="Call"
           page="inspector"
           value={
             call.ranked ? `${pct(call.topHit, call.ranked)} first pick` : `${call.calls} calls`
           }
-          detail={
-            call.ranked
-              ? `${pct(call.inResults, call.ranked)} in results · ${call.notRetrieved} not retrieved · ${call.failed} failed`
-              : "no ranked calls yet"
-          }
+          detail={call.ranked ? `${pct(call.inResults, call.ranked)} in results` : undefined}
           tone={call.ranked && call.notRetrieved / call.ranked > 0.2 ? "amber" : "green"}
-        >
-          Was the tool the agent ran Ratel's first result?
-        </Step>
+          hint="Was the tool the agent ran Ratel's first result?"
+        />
         <Step
-          n={4}
           title="Learn"
           page="adaptive"
           value={learn ? `${formatCount(learn.intents)} intents` : "Off"}
-          detail={
-            learn
-              ? `${formatCount(learn.observations)} confirmed searches${
-                  learn.seededShare > 0
-                    ? ` · ${formatPercent(learn.seededShare)} built offline`
-                    : ""
-                }`
-              : "no intent graph saved"
-          }
           tone={learn ? "green" : "muted"}
-        >
-          Similar asks grouped, with the tool that answered each.
-        </Step>
+          hint="Similar asks grouped, with the tool that answered each."
+        />
         <Step
-          n={5}
           title="Boost"
           page="adaptive"
           value={
@@ -203,13 +168,7 @@ function HowRatelWorks({ flow }: { flow: RatelFlow }) {
                 ? `${formatPercent(boost.matchRate)} matched`
                 : "Off"
           }
-          detail={
-            boost.recall1
-              ? "first result with the graph vs without"
-              : boost.active
-                ? "searches that matched a learned intent"
-                : "adaptive ranking is not on"
-          }
+          detail={boost.recall1 ? "with vs without" : undefined}
           tone={
             boost.recall1
               ? boost.recall1.with >= boost.recall1.without
@@ -219,47 +178,43 @@ function HowRatelWorks({ flow }: { flow: RatelFlow }) {
                 ? "green"
                 : "muted"
           }
-        >
-          Learned tools are promoted when a new ask matches.
-        </Step>
+          hint="Learned tools are promoted when a new ask matches. First result right, with the graph vs without."
+        />
       </ol>
     </section>
   );
 }
 
 function Step({
-  n,
   title,
   page,
   value,
   detail,
+  hint,
   tone = "green",
-  children,
 }: {
-  n: number;
   title: string;
   page: Page;
   value: string;
-  detail: string;
+  detail?: string;
+  hint: string;
   tone?: "green" | "amber" | "muted";
-  children: ReactNode;
 }) {
   const dot = { green: "bg-green", amber: "bg-amber", muted: "bg-warm-muted" }[tone];
   return (
     <li>
       <a
         href={href(page)}
+        title={hint}
         className="group flex h-full flex-col rounded-xl border border-forest-300/60 bg-forest-600/70 px-3.5 py-3 transition-colors hover:border-green/50 hover:bg-forest-300/20"
       >
         <div className="eyebrow flex items-center gap-2">
-          <span className="font-mono text-cream-dim">{n}</span>
           <span className={cx("inline-block size-1.5 rounded-full", dot)} aria-hidden />
           {title}
           <ArrowRight className="ml-auto size-3 text-warm-muted transition-colors group-hover:text-green" />
         </div>
         <div className="mt-1.5 font-mono text-lg leading-tight text-cream tabular">{value}</div>
-        <div className="mt-0.5 text-[11px] leading-snug text-warm-muted">{detail}</div>
-        <p className="mt-2 text-[11px] leading-snug text-cream-dim/70">{children}</p>
+        {detail ? <div className="mt-0.5 text-[11px] text-warm-muted">{detail}</div> : null}
       </a>
     </li>
   );
@@ -270,14 +225,11 @@ function Sources({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const ordered = [...sources].sort((a, b) => b.mtime - a.mtime);
   return (
-    <Card title="What Burrow is reading" className={className}>
+    <Card title="Files" className={className}>
       <p className="text-sm text-cream-dim">
-        {ordered.filter((s) => s.kind === "trace").length} trace file(s),{" "}
-        {ordered.filter((s) => s.kind === "intent_graph").length} intent graph(s)
-        {ordered.some((s) => s.kind === "boost_replay")
-          ? ", searches replayed with your Ratel SDK"
-          : ""}
-        .
+        {plural(ordered.filter((s) => s.kind === "trace").length, "trace")} ·{" "}
+        {plural(ordered.filter((s) => s.kind === "intent_graph").length, "intent graph")}
+        {ordered.some((s) => s.kind === "boost_replay") ? " · replay" : ""}
       </p>
       <button
         type="button"
