@@ -212,13 +212,17 @@ function linkBeats(slot: number, fromMs: number): StoryBeat[] {
  */
 export function shapeStory(shape: AnyTurnShapeKind): StoryBeat[] {
   const marks = shapeMarks(shape);
-  const starts = marks.reduce<number[]>((acc, mark, slot) => {
-    if (slot === 0) return [0];
+  const starts: number[] = [];
+  marks.forEach((mark, slot) => {
+    if (slot === 0) {
+      starts.push(0);
+      return;
+    }
     const again = mark === "tool" && marks.slice(0, slot).includes("tool");
-    const at =
-      (acc[slot - 1] ?? 0) + STORY_TIMING.markGapMs + (again ? STORY_TIMING.repeatLagMs : 0);
-    return [...acc, at];
-  }, []);
+    starts.push(
+      (starts[slot - 1] ?? 0) + STORY_TIMING.markGapMs + (again ? STORY_TIMING.repeatLagMs : 0),
+    );
+  });
   return marks.flatMap((mark, slot) => [
     ...(slot === 0 ? [] : linkBeats(slot, starts[slot - 1] ?? 0)),
     ...markBeats(mark, slot, starts[slot] ?? 0),
