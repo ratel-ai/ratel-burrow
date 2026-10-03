@@ -108,7 +108,10 @@ interface RawState {
 
 const PROJECT_KEY = "burrow.project";
 
+/** `#/...?project=<id>` opens a project directly (shareable); otherwise the last one chosen. */
 function rememberedProject(): string | null {
+  const fromUrl = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("project");
+  if (fromUrl) return fromUrl;
   try {
     return window.localStorage.getItem(PROJECT_KEY);
   } catch {
