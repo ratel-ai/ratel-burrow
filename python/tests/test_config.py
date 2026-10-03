@@ -1,4 +1,7 @@
+import os
 from pathlib import Path
+
+import pytest
 
 from ratel_burrow.config import burrow_config, burrow_paths
 
@@ -39,3 +42,13 @@ def test_project_paths() -> None:
     assert burrow_paths(dir="/x", project="team/agent v2").intent_graph == (
         "/x/intent-graphs/team_agent_v2.json"
     )
+
+
+def test_project_becomes_the_service_name(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("OTEL_SERVICE_NAME", raising=False)
+    burrow_config(dir=tmp_path / "a", project="billing-agent")
+    assert os.environ["OTEL_SERVICE_NAME"] == "billing-agent"
+    monkeypatch.setenv("OTEL_SERVICE_NAME", "already-set")
+    burrow_config(dir=tmp_path / "b", project="other")
+    assert os.environ["OTEL_SERVICE_NAME"] == "already-set"
+    assert (tmp_path / "b" / "intent-graphs").is_dir()

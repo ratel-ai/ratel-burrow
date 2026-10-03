@@ -34,6 +34,27 @@ describe("burrowConfig", () => {
     );
   });
 
+  it("makes the project the trace's source_id via OTEL_SERVICE_NAME, unless it is already set", () => {
+    const before = process.env.OTEL_SERVICE_NAME;
+    try {
+      delete process.env.OTEL_SERVICE_NAME;
+      burrowConfig({
+        dir: join(mkdtempSync(join(tmpdir(), "burrow-cfg-")), "b"),
+        project: "billing-agent",
+      });
+      expect(process.env.OTEL_SERVICE_NAME).toBe("billing-agent");
+      process.env.OTEL_SERVICE_NAME = "already-set";
+      burrowConfig({
+        dir: join(mkdtempSync(join(tmpdir(), "burrow-cfg-")), "b"),
+        project: "other",
+      });
+      expect(process.env.OTEL_SERVICE_NAME).toBe("already-set");
+    } finally {
+      if (before === undefined) delete process.env.OTEL_SERVICE_NAME;
+      else process.env.OTEL_SERVICE_NAME = before;
+    }
+  });
+
   it("names the intent graph and snapshot files the CLI discovers", () => {
     const paths = burrowPaths({ dir: "/x" });
     expect(paths).toEqual({

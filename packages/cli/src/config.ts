@@ -16,8 +16,9 @@ export interface BurrowConfigOptions {
   sessionId?: string;
   /**
    * The project this runtime belongs to: becomes its `source_id`, which Burrow (like Ratel
-   * Cloud) separates everything by, and names its own intent graph file. Defaults to the
-   * SDK's source id (`OTEL_SERVICE_NAME`, else `ratel`).
+   * Cloud) separates everything by, and names its own intent graph file. Sets
+   * `OTEL_SERVICE_NAME` when it is unset (that is where the SDK reads the source id from);
+   * an explicit `OTEL_SERVICE_NAME` wins. Call it before `ratel()`.
    */
   project?: string;
 }
@@ -59,6 +60,10 @@ export function burrowConfig(options: BurrowConfigOptions = {}): BurrowRatelConf
   const paths = burrowPaths(options);
   const sessionId = options.sessionId ?? randomUUID();
   mkdirSync(paths.traces, { recursive: true });
+  // The trace's source_id is read from OTEL_SERVICE_NAME when the SDK creates its sink (the
+  // convention Ratel Cloud shares), so the project goes there. An explicit service name wins.
+  if (options.project && !process.env.OTEL_SERVICE_NAME)
+    process.env.OTEL_SERVICE_NAME = options.project;
   // LocalFileIntentGraphStorage needs the folder to exist.
   if (options.project) mkdirSync(join(paths.dir, INTENT_GRAPHS_DIR), { recursive: true });
   return {

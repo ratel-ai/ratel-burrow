@@ -59,15 +59,23 @@ def burrow_paths(
 def burrow_config(
     dir: str | os.PathLike[str] | None = None,  # noqa: A002
     session_id: str | None = None,
+    project: str | None = None,
 ) -> dict[str, Any]:
     """Keyword arguments for `ToolCatalog(**burrow_config())` / `SkillCatalog(...)`.
 
-    Writes nothing but the traces directory. For descriptions and schemas, also call
-    `catalog.experimental_enable_catalog_definitions()`.
+    `project` is this runtime's project: its `source_id` (set as `OTEL_SERVICE_NAME` when that
+    is unset, which is where the SDK reads it from) and its own intent graph file
+    (`burrow_paths(project=...).intent_graph`). Call it before creating the catalogs.
+
+    Writes nothing but the traces (and intent-graphs) directories. For descriptions and
+    schemas, also call `catalog.experimental_enable_catalog_definitions()`.
     """
-    paths = burrow_paths(dir)
+    paths = burrow_paths(dir, project)
     sid = session_id or str(uuid.uuid4())
     Path(paths.traces).mkdir(parents=True, exist_ok=True)
+    if project:
+        os.environ.setdefault("OTEL_SERVICE_NAME", project)
+        Path(paths.intent_graph).parent.mkdir(parents=True, exist_ok=True)
     return {
         "trace": TraceSinkConfig(
             kind="jsonl", session_id=sid, path=str(Path(paths.traces) / f"{sid}.jsonl")
