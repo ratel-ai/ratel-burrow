@@ -13,6 +13,7 @@ export * from "./flow.js";
 export * from "./format.js";
 export * from "./graph-state.js";
 export * from "./health.js";
+export * from "./improvements.js";
 export * from "./inspector.js";
 export * from "./intent-graph/index.js";
 export * from "./invocations.js";

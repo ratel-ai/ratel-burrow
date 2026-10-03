@@ -8,6 +8,7 @@ the browser (the UI bundles it) and in tests.
 | `src/events.ts` | `parseTraceLog`: Ratel trace JSONL (envelope v1 + v2) → typed, time-ordered events |
 | `src/invocations.ts` | `collectInvocations`: one record per tool/skill call, deduplicated across event families |
 | `src/catalog.ts` | `buildCatalog`: tools / skills / facts from `catalog_definition` events or a snapshot file |
+| `src/improvements.ts` | `buildImprovements`: "what to improve" findings (missed, buried, empty searches, failing, never retrieved) |
 | `src/inspector.ts` | `buildInspector`: per-session searches with hits, stages, boosts and the calls they led to |
 | `src/catalog-table.ts` | filter / sort / paging for the catalog table, ported from Ratel Cloud's `table-view` |
 | `src/agent-health/` | `buildAgentHealth`: Ratel Cloud's health band (first try, detours, junk, wasted calls) and turn shapes from the trace |

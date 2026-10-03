@@ -1,4 +1,5 @@
 import {
+  buildImprovements,
   buildRatelFlow,
   formatBytes,
   formatCount,
@@ -8,6 +9,7 @@ import {
 } from "@ratel-ai/burrow-model";
 import { ArrowRight, FileJson, FileText, Network, Repeat } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
+import { Improvements } from "../components/Improvements";
 import { BurrowMascot } from "../components/Mascot";
 import { Card, Code, cx, Empty, KindDot, Pill } from "../components/ui";
 import { useBurrow } from "../lib/data";
@@ -35,6 +37,7 @@ export function OverviewScreen() {
       buildRatelFlow({ catalog, sessions, savings, boost: boostView, boostStats: boost, graph }),
     [catalog, sessions, savings, boostView, boost, graph],
   );
+  const improvements = useMemo(() => buildImprovements({ catalog, sessions }), [catalog, sessions]);
   const recent = sessions
     .flatMap((s) => s.searches)
     .sort((a, b) => b.ts - a.ts)
@@ -65,6 +68,8 @@ export function OverviewScreen() {
       </section>
 
       {status === "ready" && sources.length === 0 ? <SetupGuide /> : <HowRatelWorks flow={flow} />}
+
+      <Improvements items={improvements} searches={flow.search.searches} />
 
       <div className="grid gap-6 lg:grid-cols-5">
         <Card
