@@ -53,6 +53,26 @@ describe("computeReplay (Cloud's fold, locally)", () => {
     });
   });
 
+  it("learns one graph per project (source_id), like Cloud's per-project graphs", async () => {
+    // A second project with the same tools asks the learned question once, after project t learned it.
+    const other = trace
+      .split("\n")
+      .filter((l) => l.includes("catalog_definition"))
+      .map((l) =>
+        l
+          .replace(/"source_id": ?"t"/, '"source_id":"other"')
+          .replace(/"event_id": ?"E/, '"event_id":"O'),
+      );
+    other.push(
+      '{"v":2,"event_id":"O900","ts":1790000009000,"session_id":"s2","source_id":"other","turn_id":"x1","type":"search","query":"give the customer their money back","origin":"agent","top_k":5,"hits":[],"stages":[],"took_ms":1}',
+    );
+    const replay = await computeReplay([trace, other.join("\n")], null, await sdk());
+    if ("error" in replay) throw new Error(replay.error);
+    const fromOther = replay.turns.find((t) => t.key === "O900");
+    expect(fromOther?.matched).toBe(false);
+    expect(fromOther?.boosted_ids).toEqual(fromOther?.plain_ids);
+  });
+
   it("needs tool definitions", async () => {
     const noDefs = trace
       .split("\n")

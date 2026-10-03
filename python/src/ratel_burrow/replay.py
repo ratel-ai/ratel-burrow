@@ -149,16 +149,42 @@ def _core_event(e: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def _project(event: dict[str, Any]) -> str:
+    """`projectOf`: the runtime's source_id, or the default project."""
+    source = event.get("source_id")
+    return source if isinstance(source, str) and source else "default"
+
+
 def compute_replay(
     texts: Sequence[str], snapshot: dict[str, Any] | None, sdk: Any
 ) -> dict[str, Any]:
+    """Fold each project (source_id) on its own, in first-appearance order, as Node does."""
     events = _parse(texts)
-    defs = _definitions(events, snapshot)
-    if not defs:
+    by_project: dict[str, list[dict[str, Any]]] = {}
+    for e in events:
+        by_project.setdefault(_project(e), []).append(e)
+    turns: list[dict[str, Any]] = []
+    folded = 0
+    for project_events in by_project.values():
+        result = _fold_project(project_events, snapshot, sdk)
+        if result is None:
+            continue
+        folded += 1
+        turns.extend(result)
+    if folded == 0:
         return {
             "error": "No tool definitions in the trace: turn on catalog definitions so Burrow "
             "can replay searches."
         }
+    return {"v": 1, "method": "bm25", "k": REPLAY_K, "turns": turns}
+
+
+def _fold_project(
+    events: list[dict[str, Any]], snapshot: dict[str, Any] | None, sdk: Any
+) -> list[dict[str, Any]] | None:
+    defs = _definitions(events, snapshot)
+    if not defs:
+        return None
 
     noop = sdk.TraceSinkConfig(kind="noop")
     tools = [
@@ -244,4 +270,4 @@ def compute_replay(
     finally:
         boosted.experimental_disable_adaptive_ranking()
         learner.experimental_disable_adaptive_ranking()
-    return {"v": 1, "method": "bm25", "k": REPLAY_K, "turns": turns}
+    return turns

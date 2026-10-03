@@ -9,6 +9,7 @@ import {
   type CatalogSnapshotFile,
   isEvent,
   parseTraceLog,
+  projectOf,
   type TraceEvent,
 } from "@ratel-ai/burrow-model";
 import type * as Sdk from "@ratel-ai/sdk";
@@ -23,6 +24,9 @@ import type * as Sdk from "@ratel-ai/sdk";
  * Then the learner absorbs it, and absorbs each invoke, through `recordEvent`
  * exactly as the runtime would. A search the runtime reported itself
  * (`base_hits`) keeps the runtime's two lists. Lexical (BM25), like Cloud.
+ *
+ * Each project (`source_id`) is folded on its own, from its own catalog
+ * definitions into its own graph, as Cloud keeps one graph per project.
  */
 
 export type SdkModule = typeof Sdk;
@@ -83,13 +87,39 @@ export async function computeReplay(
   sdk: SdkModule,
 ): Promise<BoostReplay | { error: string }> {
   const { events } = parseTraceLog(traceTexts);
-  const tools = buildCatalog(events, snapshot).tools.filter((t) => t.defined && !t.removed);
-  if (tools.length === 0) {
+  // Projects in the order they first appear; the Python launcher folds in the same order.
+  const byProject = new Map<string, TraceEvent[]>();
+  for (const e of events) {
+    const id = projectOf(e);
+    const list = byProject.get(id);
+    if (list) list.push(e);
+    else byProject.set(id, [e]);
+  }
+  const turns: BoostReplayTurn[] = [];
+  let folded = 0;
+  for (const projectEvents of byProject.values()) {
+    const result = await foldProject(projectEvents, snapshot, sdk);
+    if (result === null) continue;
+    folded += 1;
+    turns.push(...result);
+  }
+  if (folded === 0) {
     return {
       error:
         "No tool definitions in the trace: turn on catalog definitions (burrowConfig() does) so Burrow can replay searches.",
     };
   }
+  return { v: 1, method: "bm25", k: REPLAY_K, turns };
+}
+
+/** One project's fold, or null when it recorded no tool definitions. */
+async function foldProject(
+  events: readonly TraceEvent[],
+  snapshot: CatalogSnapshotFile | null,
+  sdk: SdkModule,
+): Promise<BoostReplayTurn[] | null> {
+  const tools = buildCatalog(events, snapshot).tools.filter((t) => t.defined && !t.removed);
+  if (tools.length === 0) return null;
   const definitions = tools.map((t) => ({
     id: t.id,
     name: t.name,
@@ -171,5 +201,5 @@ export async function computeReplay(
     boosted.experimentalDisableAdaptiveRanking();
     learner.experimentalDisableAdaptiveRanking();
   }
-  return { v: 1, method: "bm25", k: REPLAY_K, turns };
+  return turns;
 }

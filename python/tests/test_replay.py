@@ -42,6 +42,30 @@ def test_passes_reported_turns_through() -> None:
 
 
 @needs_sdk
+def test_learns_one_graph_per_project() -> None:
+    import re
+
+    other = [
+        re.sub(
+            r'"event_id": ?"E',
+            '"event_id":"O',
+            re.sub(r'"source_id": ?"t"', '"source_id":"other"', line),
+        )
+        for line in TRACE.splitlines()
+        if "catalog_definition" in line
+    ]
+    other.append(
+        '{"v":2,"event_id":"O900","ts":1790000009000,"session_id":"s2","source_id":"other",'
+        '"turn_id":"x1","type":"search","query":"give the customer their money back",'
+        '"origin":"agent","top_k":5,"hits":[],"stages":[],"took_ms":1}'
+    )
+    turns = compute_replay([TRACE, "\n".join(other)], None, sdk)["turns"]
+    from_other = next(t for t in turns if t["key"] == "O900")
+    assert from_other["matched"] is False
+    assert from_other["boosted_ids"] == from_other["plain_ids"]
+
+
+@needs_sdk
 def test_needs_tool_definitions() -> None:
     no_defs = "\n".join(line for line in TRACE.splitlines() if "catalog_definition" not in line)
     assert "definitions" in compute_replay([no_defs], None, sdk)["error"]
