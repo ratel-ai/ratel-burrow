@@ -156,11 +156,15 @@ function ProjectSwitcher() {
         >
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
-              {p.id} · {p.events.toLocaleString("en-US")} events
+              {p.id}
             </option>
           ))}
         </select>
       )}
+      <div className="mt-1 text-[11px] text-warm-muted">
+        {(projects.find((p) => p.id === project)?.events ?? 0).toLocaleString("en-US")} events
+        {projects.length > 1 ? ` · ${projects.length} projects` : ""}
+      </div>
     </div>
   );
 }

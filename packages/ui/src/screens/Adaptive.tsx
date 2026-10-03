@@ -19,7 +19,7 @@ import { buildBoostWarning, GraphMeta, GraphWarnings } from "../components/adapt
 import { GraphState } from "../components/adaptive/GraphState";
 import { SummaryTiles } from "../components/adaptive/SummaryTiles";
 import { type GraphMode, IntentGraphForce } from "../components/IntentGraphForce";
-import { Code, Empty, PageHeader, Tabs } from "../components/ui";
+import { Code, Empty, PageHeader } from "../components/ui";
 import { useBurrow } from "../lib/data";
 import { navigate, useRoute } from "../lib/route";
 
@@ -63,14 +63,6 @@ export function AdaptiveScreen() {
       </PageHeader>
 
       <GraphWarnings warnings={warning ? [warning] : []} />
-
-      {graphs.length > 1 ? (
-        <Tabs
-          value={loaded?.source.id ?? ""}
-          onChange={(id) => navigate("adaptive", { graph: id })}
-          options={graphs.map((g) => ({ value: g.source.id, label: g.source.label }))}
-        />
-      ) : null}
 
       {!loaded ? (
         <>
