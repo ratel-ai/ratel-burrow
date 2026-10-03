@@ -42,18 +42,20 @@ export function OverviewScreen() {
   const now = Date.now();
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-2xl border border-forest-300/60 bg-forest-600/60 px-8 py-6">
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-2xl border border-forest-300/60 bg-forest-600/60 px-6 py-4">
         <div className="pixel-grid pixel-grid-fade pointer-events-none absolute inset-0 opacity-60" />
-        <div className="relative flex flex-wrap items-center gap-8">
+        <div className="relative flex flex-wrap items-center gap-6">
           <BurrowMascot
-            className="w-72 shrink-0"
+            className="w-44 shrink-0"
             title="A honey badger peering out of its burrow"
           />
           <div className="min-w-64 flex-1">
             <div className="eyebrow">Ratel Burrow{project ? ` · ${project}` : ""}</div>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight">See what Ratel is doing.</h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-cream-dim/80">
+            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
+              See what Ratel is doing.
+            </h1>
+            <p className="mt-1 max-w-xl text-sm leading-relaxed text-cream-dim/80">
               The free, local view of what Ratel Cloud shows: your catalog, every search and the
               call it led to, and what adaptive ranking learned. Read-only, from the files Ratel
               already writes.
@@ -120,11 +122,11 @@ function HowRatelWorks({ flow }: { flow: RatelFlow }) {
   const { catalog, search, call, learn, boost } = flow;
   return (
     <section>
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">How Ratel works, in this project</h2>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <h2 className="text-base font-semibold">How Ratel works, in this project</h2>
         <span className="text-xs text-warm-muted">one request, from catalog to boost</span>
       </div>
-      <ol className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <ol className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
         <Step
           n={1}
           title="Catalog"
@@ -132,8 +134,7 @@ function HowRatelWorks({ flow }: { flow: RatelFlow }) {
           value={`${formatCount(catalog.tools)} tools`}
           detail={`${catalog.skills} skills · ${catalog.facts} facts${catalog.defined ? "" : " · ids only"}`}
         >
-          Everything your agent could use. Ratel indexes each entry's name and description; the
-          model never sees the whole list.
+          What your agent could use; the model never sees the whole list.
         </Step>
         <Step
           n={2}
@@ -150,7 +151,7 @@ function HowRatelWorks({ flow }: { flow: RatelFlow }) {
               : "none yet"
           }
         >
-          For each request Ratel ranks the catalog and hands the model only the top few.
+          Ratel ranks the catalog and hands the model the top few.
         </Step>
         <Step
           n={3}
@@ -166,7 +167,7 @@ function HowRatelWorks({ flow }: { flow: RatelFlow }) {
           }
           tone={call.ranked && call.notRetrieved / call.ranked > 0.2 ? "amber" : "green"}
         >
-          The agent picks a tool. When it was Ratel's first result, ranking did its job.
+          Was the tool the agent ran Ratel's first result?
         </Step>
         <Step
           n={4}
@@ -184,7 +185,7 @@ function HowRatelWorks({ flow }: { flow: RatelFlow }) {
           }
           tone={learn ? "green" : "muted"}
         >
-          Adaptive ranking groups similar asks and remembers which tool answered each.
+          Similar asks grouped, with the tool that answered each.
         </Step>
         <Step
           n={5}
@@ -214,7 +215,7 @@ function HowRatelWorks({ flow }: { flow: RatelFlow }) {
                 : "muted"
           }
         >
-          When a new ask matches a learned intent, Ratel promotes the tools that answered it.
+          Learned tools are promoted when a new ask matches.
         </Step>
       </ol>
     </section>
@@ -240,22 +241,20 @@ function Step({
 }) {
   const dot = { green: "bg-green", amber: "bg-amber", muted: "bg-warm-muted" }[tone];
   return (
-    <li className="relative">
+    <li>
       <a
         href={href(page)}
-        className="flex h-full flex-col rounded-xl border border-forest-300/60 bg-forest-600/70 p-4 transition-colors hover:border-green/50 hover:bg-forest-300/20"
+        className="group flex h-full flex-col rounded-xl border border-forest-300/60 bg-forest-600/70 px-3.5 py-3 transition-colors hover:border-green/50 hover:bg-forest-300/20"
       >
         <div className="eyebrow flex items-center gap-2">
           <span className="font-mono text-cream-dim">{n}</span>
           <span className={cx("inline-block size-1.5 rounded-full", dot)} aria-hidden />
           {title}
+          <ArrowRight className="ml-auto size-3 text-warm-muted transition-colors group-hover:text-green" />
         </div>
-        <div className="mt-2 font-mono text-xl text-cream tabular">{value}</div>
-        <div className="mt-0.5 text-xs text-warm-muted">{detail}</div>
-        <p className="mt-3 flex-1 text-xs leading-relaxed text-cream-dim/80">{children}</p>
-        <span className="mt-3 inline-flex items-center gap-1 text-xs text-green">
-          Open <ArrowRight className="size-3" />
-        </span>
+        <div className="mt-1.5 font-mono text-lg leading-tight text-cream tabular">{value}</div>
+        <div className="mt-0.5 text-[11px] leading-snug text-warm-muted">{detail}</div>
+        <p className="mt-2 text-[11px] leading-snug text-cream-dim/70">{children}</p>
       </a>
     </li>
   );

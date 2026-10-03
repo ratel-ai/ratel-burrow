@@ -1,5 +1,6 @@
 import {
   formatMs,
+  formatPercent,
   type LinkedInvocation,
   plural,
   relativeTime,
@@ -73,8 +74,12 @@ export function InspectorScreen() {
       {sessions.length === 0 ? (
         <Empty title="No searches yet">Searches appear here as soon as Ratel logs them.</Empty>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-          <SessionList sessions={sessions} activeId={toolFilter ? null : sessionId} />
+        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <SessionList
+            sessions={sessions}
+            activeId={toolFilter ? null : sessionId}
+            onFilter={setFilter}
+          />
           <div className="min-w-0 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="min-w-0">
@@ -133,38 +138,177 @@ export function InspectorScreen() {
   );
 }
 
+/** Where the called tool sat in its search, per session: the inspector's one-line health read. */
+function rankMix(session: SessionTimeline) {
+  const mix = { first: 0, top: 0, lower: 0, missed: 0, failed: 0, calls: 0 };
+  for (const search of session.searches) {
+    if (search.kind !== "tool" || (search.hits.length === 0 && search.hitCount > 0)) continue;
+    for (const call of search.invocations) {
+      mix.calls += 1;
+      if (call.error) mix.failed += 1;
+      if (call.rank === null) mix.missed += 1;
+      else if (call.rank === 1) mix.first += 1;
+      else if (call.rank <= 3) mix.top += 1;
+      else mix.lower += 1;
+    }
+  }
+  return mix;
+}
+
+const MIX_PARTS = [
+  { key: "first", label: "rank 1", color: "bg-green" },
+  { key: "top", label: "rank 2–3", color: "bg-green/45" },
+  { key: "lower", label: "rank 4+", color: "bg-amber/70" },
+  { key: "missed", label: "not retrieved", color: "bg-coral/80" },
+] as const;
+
+function MixBar({ mix, className }: { mix: ReturnType<typeof rankMix>; className?: string }) {
+  if (mix.calls === 0)
+    return <div className={cx("h-1.5 rounded-full bg-forest-300/50", className)} />;
+  return (
+    <div className={cx("flex h-1.5 gap-px overflow-hidden rounded-full", className)} aria-hidden>
+      {MIX_PARTS.map((p) =>
+        mix[p.key] ? (
+          <div
+            key={p.key}
+            className={p.color}
+            style={{ width: `${(mix[p.key] / mix.calls) * 100}%` }}
+          />
+        ) : null,
+      )}
+    </div>
+  );
+}
+
 function SessionList({
   sessions,
   activeId,
+  onFilter,
 }: {
   sessions: SessionTimeline[];
   activeId: string | null;
+  onFilter: (f: Filter) => void;
 }) {
   const now = Date.now();
+  const active = sessions.find((s) => s.sessionId === activeId) ?? null;
   return (
-    <nav className="space-y-1.5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
-      <div className="eyebrow px-1 pb-1">Sessions · {sessions.length}</div>
-      {sessions.map((s) => (
-        <a
-          key={s.sessionId}
-          href={href("inspector", { session: s.sessionId })}
-          className={cx(
-            "block rounded-lg border px-3 py-2.5 transition-colors",
-            s.sessionId === activeId
-              ? "border-green/60 bg-forest-300/50"
-              : "border-forest-300/60 bg-forest-600/60 hover:bg-forest-300/30",
-          )}
+    <aside className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+      <nav className="space-y-1.5">
+        <div className="eyebrow px-1 pb-1">Sessions · {sessions.length}</div>
+        {sessions.map((s) => {
+          const mix = rankMix(s);
+          return (
+            <a
+              key={s.sessionId}
+              href={href("inspector", { session: s.sessionId })}
+              className={cx(
+                "block rounded-lg border px-3 py-2.5 transition-colors",
+                s.sessionId === activeId
+                  ? "border-green/60 bg-forest-300/50"
+                  : "border-forest-300/60 bg-forest-600/60 hover:bg-forest-300/30",
+              )}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="truncate font-mono text-xs text-cream" title={s.sessionId}>
+                  {s.sessionId.slice(0, 8)}
+                </span>
+                <span className="shrink-0 text-[11px] text-warm-muted">
+                  {relativeTime(s.end, now)}
+                </span>
+              </div>
+              <div className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] text-warm-muted">
+                <span>{plural(s.stats.searches, "search", "searches")}</span>
+                <span>{plural(s.stats.invocations, "call")}</span>
+                {mix.calls ? (
+                  <span className="text-cream-dim">
+                    {formatPercent(mix.first / mix.calls)} first
+                  </span>
+                ) : null}
+                {s.stats.errors ? (
+                  <span className="text-coral">{s.stats.errors} failed</span>
+                ) : null}
+              </div>
+              <MixBar mix={mix} className="mt-2" />
+            </a>
+          );
+        })}
+      </nav>
+      {active ? <SessionSummary session={active} onFilter={onFilter} /> : null}
+    </aside>
+  );
+}
+
+/** The selected session at a glance: span, where called tools ranked, the tools it ran most. */
+function SessionSummary({
+  session,
+  onFilter,
+}: {
+  session: SessionTimeline;
+  onFilter: (f: Filter) => void;
+}) {
+  const mix = rankMix(session);
+  const tools = new Map<string, number>();
+  for (const s of session.searches)
+    for (const c of s.invocations) tools.set(c.id, (tools.get(c.id) ?? 0) + 1);
+  const topTools = [...tools].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const problems = session.searches.filter(hasProblem).length;
+  const span = session.end - session.start;
+  return (
+    <section className="rounded-xl border border-forest-300/60 bg-forest-600/60 p-3.5">
+      <div className="eyebrow">This session</div>
+      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
+        <dt className="text-warm-muted">Started</dt>
+        <dd className="text-right font-mono text-cream-dim">
+          {new Date(session.start).toLocaleTimeString()}
+        </dd>
+        <dt className="text-warm-muted">Duration</dt>
+        <dd className="text-right font-mono text-cream-dim">{formatMs(span)}</dd>
+        <dt className="text-warm-muted">Project</dt>
+        <dd className="truncate text-right font-mono text-cream-dim">
+          {session.sourceId ?? "default"}
+        </dd>
+      </dl>
+      <div className="mt-3 text-[11px] text-warm-muted">Where the called tool ranked</div>
+      <MixBar mix={mix} className="mt-1.5 h-2" />
+      <ul className="mt-2 space-y-1 text-[11px]">
+        {MIX_PARTS.map((p) => (
+          <li key={p.key} className="flex items-center gap-2">
+            <span className={cx("inline-block size-2 rounded-sm", p.color)} aria-hidden />
+            <span className="text-cream-dim">{p.label}</span>
+            <span className="ml-auto font-mono text-warm-muted">
+              {mix[p.key]} · {mix.calls ? formatPercent(mix[p.key] / mix.calls) : "–"}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {topTools.length ? (
+        <>
+          <div className="mt-3 text-[11px] text-warm-muted">Called most</div>
+          <ul className="mt-1.5 space-y-1">
+            {topTools.map(([id, n]) => (
+              <li key={id} className="flex items-center gap-2 text-[11px]">
+                <a
+                  href={href("catalog", { tab: "tools", id })}
+                  className="min-w-0 flex-1 truncate font-mono text-cream-dim hover:underline"
+                >
+                  {id}
+                </a>
+                <span className="font-mono text-warm-muted">{n}×</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {problems ? (
+        <button
+          type="button"
+          onClick={() => onFilter("problems")}
+          className="mt-3 w-full rounded-md border border-amber/40 bg-amber/10 px-2 py-1.5 text-left text-[11px] text-cream-dim hover:bg-amber/20"
         >
-          <div className="truncate font-mono text-xs text-cream">{s.sourceId ?? s.sessionId}</div>
-          <div className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] text-warm-muted">
-            <span>{plural(s.stats.searches, "search", "searches")}</span>
-            <span>{plural(s.stats.invocations, "call")}</span>
-            {s.stats.errors ? <span className="text-coral">{s.stats.errors} failed</span> : null}
-          </div>
-          <div className="mt-0.5 text-[11px] text-warm-muted">{relativeTime(s.end, now)}</div>
-        </a>
-      ))}
-    </nav>
+          {problems} searches with a problem → show only those
+        </button>
+      ) : null}
+    </section>
   );
 }
 

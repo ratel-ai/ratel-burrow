@@ -1,13 +1,5 @@
 import { relativeTime } from "@ratel-ai/burrow-model";
-import {
-  Activity,
-  Eye,
-  LayoutGrid,
-  Library,
-  type LucideIcon,
-  Network,
-  ScanSearch,
-} from "lucide-react";
+import { Activity, BookOpen, Eye, HeartPulse, Home, type LucideIcon, Orbit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BadgerMark, BurrowMascot } from "./components/Mascot";
 import { cx } from "./components/ui";
@@ -19,12 +11,24 @@ import { HealthScreen } from "./screens/Health";
 import { InspectorScreen } from "./screens/Inspector";
 import { OverviewScreen } from "./screens/Overview";
 
-const NAV: { page: Page; label: string; icon: LucideIcon }[] = [
-  { page: "overview", label: "Overview", icon: LayoutGrid },
-  { page: "catalog", label: "Catalog", icon: Library },
-  { page: "inspector", label: "Search inspector", icon: ScanSearch },
-  { page: "adaptive", label: "Adaptive ranking", icon: Network },
-  { page: "health", label: "Agent health", icon: Activity },
+/** Ratel Cloud's sidebar groups and icons (`ScopedSidebar.tsx`), for the pages Burrow has. */
+const NAV: { group: string; items: { page: Page; label: string; icon: LucideIcon }[] }[] = [
+  {
+    group: "Project",
+    items: [
+      { page: "overview", label: "Overview", icon: Home },
+      { page: "health", label: "Agent health", icon: HeartPulse },
+    ],
+  },
+  {
+    group: "Observability",
+    items: [{ page: "inspector", label: "Search inspector", icon: Activity }],
+  },
+  { group: "Capabilities", items: [{ page: "catalog", label: "Catalogs", icon: BookOpen }] },
+  {
+    group: "Continuous improvement",
+    items: [{ page: "adaptive", label: "Adaptive ranking", icon: Orbit }],
+  },
 ];
 
 export function App() {
@@ -74,22 +78,29 @@ function Shell() {
           </span>
         </a>
         <ProjectSwitcher />
-        <nav className="space-y-0.5">
-          {NAV.map(({ page: p, label, icon: Icon }) => (
-            <a
-              key={p}
-              href={href(p)}
-              aria-current={p === page ? "page" : undefined}
-              className={cx(
-                "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                p === page
-                  ? "bg-forest-300/70 text-cream"
-                  : "text-cream-dim/80 hover:bg-forest-300/40 hover:text-cream",
-              )}
-            >
-              <Icon className={cx("size-4", p === page ? "text-green" : "text-warm-muted")} />
-              {label}
-            </a>
+        <nav className="space-y-4">
+          {NAV.map(({ group, items }) => (
+            <div key={group}>
+              <div className="eyebrow px-2.5 pb-1">{group}</div>
+              <div className="space-y-0.5">
+                {items.map(({ page: p, label, icon: Icon }) => (
+                  <a
+                    key={p}
+                    href={href(p)}
+                    aria-current={p === page ? "page" : undefined}
+                    className={cx(
+                      "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
+                      p === page
+                        ? "bg-forest-300/70 text-cream"
+                        : "text-cream-dim hover:bg-forest-300/40 hover:text-cream",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" strokeWidth={1.7} aria-hidden />
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
         <div className="mt-auto space-y-2 px-2 text-xs text-warm-muted">
