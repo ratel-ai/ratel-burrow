@@ -65,11 +65,7 @@ export function InspectorScreen() {
 
   return (
     <div>
-      <PageHeader eyebrow="Search inspector" title="Every search, and what happened next">
-        For each query your agent sent, Ratel ranked the catalog and returned the top hits. Below
-        each search are the tools the agent then called, with the rank Ratel had given them. A call
-        marked <em>not retrieved</em> means the agent used a tool this search did not surface.
-      </PageHeader>
+      <PageHeader eyebrow="Search inspector" title="Every search, and what happened next" />
 
       {sessions.length === 0 ? (
         <Empty title="No searches yet">Searches appear here as soon as Ratel logs them.</Empty>
@@ -117,10 +113,7 @@ export function InspectorScreen() {
               </div>
             </div>
             {session && !toolFilter && session.orphans.length > 0 ? (
-              <Card
-                title="Calls before any search"
-                hint="The agent called these without a preceding Ratel search in this session."
-              >
+              <Card title="Calls before any search" hint="Called without a Ratel search first.">
                 <CallList calls={session.orphans} />
               </Card>
             ) : null}

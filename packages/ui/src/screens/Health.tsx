@@ -11,7 +11,7 @@ import { useMemo } from "react";
 import { TimeChart } from "../components/charts";
 import { HealthBand } from "../components/health/HealthBand";
 import { TurnShapes } from "../components/health/TurnShapes";
-import { Card, Code, Empty, KindDot, Pill, Tile } from "../components/ui";
+import { Card, Code, cx, Empty, KindDot, Pill, Tile } from "../components/ui";
 import { useBurrow } from "../lib/data";
 import { href } from "../lib/route";
 
@@ -38,10 +38,6 @@ export function HealthScreen() {
           <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight">
             How your agent found its tools
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-warm-muted">
-            Each turn is one request: the searches it ran and the tools it called. Read from your
-            SDK's trace, the way Ratel Cloud reads it.
-          </p>
         </div>
         <span className="rounded-md border border-forest-300 bg-forest-600/60 px-2 py-1 font-mono text-[11px] text-cream-dim">
           last {agent.windowDays} days · {agent.turns.toLocaleString("en-US")} turns
@@ -49,7 +45,7 @@ export function HealthScreen() {
       </header>
 
       <HealthBand tiles={agent.tiles} />
-      <TurnShapes shapes={agent.shapes} turns={agent.turns} />
+      <TurnShapes shapes={agent.shapes} />
 
       <div className="eyebrow pt-2">Runtime</div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -87,11 +83,9 @@ export function HealthScreen() {
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card title="MCP servers" hint="Upstreams connected with registerMcpServer.">
-          {health.servers.length === 0 ? (
-            <p className="text-sm text-warm-muted">No MCP upstreams recorded.</p>
-          ) : (
+      <div className={cx("grid gap-6", health.servers.length > 0 && "lg:grid-cols-2")}>
+        {health.servers.length > 0 ? (
+          <Card title="MCP servers">
             <ul className="divide-y divide-forest-300/50">
               {health.servers.map((s) => (
                 <li key={s.server} className="flex flex-wrap items-center gap-2 py-2.5">
@@ -109,17 +103,10 @@ export function HealthScreen() {
                 </li>
               ))}
             </ul>
-          )}
-        </Card>
+          </Card>
+        ) : null}
 
-        <Card
-          title="Context savings"
-          hint={
-            savings.basis === "definitions"
-              ? "From your tool definitions: tokens ≈ characters ÷ 4 of name, description and input schema."
-              : "Burrow needs tool definitions to size the catalog."
-          }
-        >
+        <Card title="Context savings">
           {savings.basis === "none" ? (
             <p className="text-sm text-warm-muted">
               Not enough data yet. Turn on catalog definitions with <Code>burrowConfig()</Code>.
@@ -162,19 +149,12 @@ export function HealthScreen() {
                   />
                 </div>
               ) : null}
-              <p className="mt-3 text-xs text-warm-muted">
-                Compared with sending every tool definition on every turn. An estimate, not a
-                measurement.
-              </p>
             </>
           )}
         </Card>
       </div>
 
-      <Card
-        title="Tools and skills by calls"
-        hint="Latency is wall time per call, from Ratel's trace events."
-      >
+      <Card title="Tools and skills by calls">
         {health.tools.length === 0 ? (
           <Empty title="No calls recorded yet" />
         ) : (

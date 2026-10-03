@@ -42,7 +42,7 @@ const SHAPE_ORDER: Record<TurnShapeKind, number> = {
   repeat: 5,
 };
 
-export function TurnShapes({ shapes, turns }: { shapes: readonly TurnShapeView[]; turns: number }) {
+export function TurnShapes({ shapes }: { shapes: readonly TurnShapeView[] }) {
   const sorted = [...shapes].sort(
     (a, b) => b.share - a.share || SHAPE_ORDER[a.shape] - SHAPE_ORDER[b.shape],
   );
@@ -51,9 +51,6 @@ export function TurnShapes({ shapes, turns }: { shapes: readonly TurnShapeView[]
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <h2 className="font-display text-lg font-semibold text-cream">Turn shapes</h2>
-          <p className="mt-1 text-sm text-warm-muted">
-            How {formatTurnCount(turns)} went, most common first.
-          </p>
         </div>
         <Legend />
       </div>

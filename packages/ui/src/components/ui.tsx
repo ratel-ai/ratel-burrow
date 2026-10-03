@@ -17,18 +17,13 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="relative mb-6 overflow-hidden rounded-xl border border-forest-300/60 bg-forest-600/60 px-6 py-5">
-      <div className="pixel-grid pixel-grid-fade pointer-events-none absolute inset-0 opacity-60" />
-      <div className="relative flex flex-wrap items-end justify-between gap-4">
-        <div className="max-w-3xl">
-          <div className="eyebrow">{eyebrow}</div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-cream">{title}</h1>
-          {children ? (
-            <p className="mt-2 text-sm leading-relaxed text-cream-dim/80">{children}</p>
-          ) : null}
-        </div>
-        {actions}
+    <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
+      <div className="max-w-3xl">
+        <div className="eyebrow">{eyebrow}</div>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-cream">{title}</h1>
+        {children ? <p className="mt-1 text-sm text-warm-muted">{children}</p> : null}
       </div>
+      {actions}
     </header>
   );
 }

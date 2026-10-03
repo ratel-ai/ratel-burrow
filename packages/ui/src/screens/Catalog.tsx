@@ -40,7 +40,7 @@ const KINDS: Record<
     title: "Skills",
     noun: "skill",
     eyebrow: "Instruction catalog",
-    description: "The playbooks your agent retrieves, with how often each was found and loaded.",
+    description: "Playbooks your agent retrieves.",
     icon: BookOpen,
     callsLabel: "Loads",
   },
@@ -48,8 +48,7 @@ const KINDS: Record<
     title: "Tools",
     noun: "tool",
     eyebrow: "Capability catalog",
-    description:
-      "Every tool Ratel can rank, joined with how your agent searched for and called it.",
+    description: "Everything Ratel can rank.",
     icon: Wrench,
     callsLabel: "Calls",
   },
@@ -57,7 +56,7 @@ const KINDS: Record<
     title: "Facts",
     noun: "fact",
     eyebrow: "Knowledge catalog",
-    description: "Durable facts your agent can retrieve, and how often each was injected.",
+    description: "Knowledge your agent retrieves.",
     icon: Database,
     callsLabel: "Injected",
   },
@@ -75,18 +74,14 @@ export function CatalogScreen() {
 
 /** Ratel Cloud's catalog index: one card per catalog. */
 function CatalogIndex() {
-  const { catalog, project } = useBurrow();
+  const { catalog } = useBurrow();
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-7">
-      <header className="border-b border-forest-300 pb-7">
+      <header className="border-b border-forest-300 pb-5">
         <div className="eyebrow">Capabilities</div>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-cream">
           Catalogs
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-warm-muted">
-          What your agent can retrieve{project ? ` in ${project}` : ""}: the exact text Ratel ranks,
-          and how each entry has been used.
-        </p>
       </header>
       <section aria-label="Project catalogs" className="grid gap-3 md:grid-cols-3">
         {(["skills", "tools", "facts"] as const).map((kind) => {
@@ -97,7 +92,7 @@ function CatalogIndex() {
               key={kind}
               href={href("catalog", { tab: kind })}
               aria-label={`Open ${meta.title} catalog`}
-              className="group relative flex min-h-64 flex-col overflow-hidden rounded-2xl border border-forest-300 bg-forest-600/50 p-5 transition-[border-color,background-color,transform] duration-300 hover:-translate-y-0.5 hover:border-coral/35 hover:bg-forest-600/75"
+              className="group relative flex min-h-48 flex-col overflow-hidden rounded-2xl border border-forest-300 bg-forest-600/50 p-5 transition-[border-color,background-color,transform] duration-300 hover:-translate-y-0.5 hover:border-coral/35 hover:bg-forest-600/75"
             >
               <div
                 className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-coral/0 to-transparent transition-colors group-hover:via-coral/70"
@@ -112,7 +107,7 @@ function CatalogIndex() {
                   aria-hidden
                 />
               </div>
-              <div className="mt-8">
+              <div className="mt-6">
                 <p className="font-mono text-[9px] uppercase tracking-[0.13em] text-warm-muted">
                   {meta.eyebrow}
                 </p>
@@ -138,7 +133,7 @@ function CatalogIndex() {
 }
 
 function CatalogPage({ kind, params }: { kind: Kind; params: URLSearchParams }) {
-  const { catalog, project } = useBurrow();
+  const { catalog } = useBurrow();
   const meta = KINDS[kind];
   const entries = catalog[kind];
   const view = resolveCatalogView(Object.fromEntries(params));
@@ -180,10 +175,6 @@ function CatalogPage({ kind, params }: { kind: Kind; params: URLSearchParams }) 
             <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-cream">
               {meta.title}
             </h1>
-            <p className="mt-1.5 max-w-2xl text-sm text-warm-muted">
-              {meta.description}
-              {project ? ` Project ${project}.` : ""}
-            </p>
           </div>
           <span className="inline-flex items-center gap-2 rounded-full border border-forest-300 bg-forest-600/55 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.09em] text-cream-dim">
             <span className="size-1.5 rounded-full bg-green" aria-hidden />

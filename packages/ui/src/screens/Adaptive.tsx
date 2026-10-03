@@ -56,11 +56,7 @@ export function AdaptiveScreen() {
         eyebrow="Adaptive ranking"
         title="Intent graph"
         actions={loaded?.graph ? <GraphMeta doc={loaded.graph} file={loaded.source.label} /> : null}
-      >
-        Adaptive ranking groups similar queries into intents and remembers which tools and skills
-        the agent called for each. When a new query matches an intent, Ratel promotes them. The
-        Boost panel shows whether that put the tool your agent used higher.
-      </PageHeader>
+      />
 
       <GraphWarnings warnings={warning ? [warning] : []} />
 
@@ -181,8 +177,7 @@ function GraphPage({
             ))}
           </div>
         </div>
-        <p className="mt-1 text-xs text-warm-muted">
-          {current?.caption}
+        <p className="mt-1 text-xs text-warm-muted" title={current?.caption}>
           {model.truncated
             ? ` Showing the ${model.truncated.drawn.toLocaleString("en-US")} highest-support clusters of ${model.truncated.total.toLocaleString("en-US")}.`
             : null}

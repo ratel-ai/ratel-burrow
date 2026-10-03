@@ -38,7 +38,10 @@ function HealthTileCard({ tile }: { tile: HealthTile }) {
   const interval = tileIntervalText(tile);
   const delta = tileDelta(tile);
   return (
-    <div className="relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-forest-300 bg-forest-600/60 px-3.5 pt-3 transition-colors hover:bg-forest/40">
+    <div
+      title={interval ? `${tile.sub} Likely ${interval}.` : tile.sub}
+      className="relative flex min-w-0 flex-col overflow-hidden rounded-xl border border-forest-300 bg-forest-600/60 px-3.5 pt-3 transition-colors hover:bg-forest/40"
+    >
       <div className="flex min-w-0 items-center gap-1.5">
         <span
           className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
@@ -82,13 +85,6 @@ function HealthTileCard({ tile }: { tile: HealthTile }) {
           )
         ) : null}
       </div>
-      {interval ? (
-        <p className="mt-1 font-mono text-[10px] leading-4 tabular-nums text-warm-muted/75">
-          <span className="text-warm-muted/50">likely </span>
-          {interval}
-        </p>
-      ) : null}
-      <p className="mt-1 text-[11px] leading-4 text-warm-muted">{tile.sub}</p>
       <div className="-mx-3.5 mt-auto pt-2">
         <Trend
           data={tile.series.map((p) => p.value)}

@@ -198,10 +198,6 @@ export function BoostPanel({ view }: { view: BoostView }) {
   const onlineFrom = view.online.fromTurn;
   const onlineIndex = onlineFrom === null ? null : points.findIndex((p) => p.turn >= onlineFrom);
   const onlineAt = onlineIndex === null || onlineIndex < 0 ? null : onlineIndex;
-  const targetNoun =
-    reference.scored || reference.arm === null
-      ? "the tool your agent used"
-      : `${reference.arm}'s top ${reference.k ?? 1}`;
 
   function onPointerMove(event: React.PointerEvent<SVGSVGElement>) {
     const svg = svgRef.current;
@@ -249,18 +245,7 @@ export function BoostPanel({ view }: { view: BoostView }) {
           </div>
         )}
       </div>
-      <p className="mt-1 text-xs text-warm-muted">
-        {reference.arm === null
-          ? "How often the tool your agent used came out on top of the ranking this graph produced."
-          : reference.scored
-            ? reference.kind === "baseline"
-              ? "How often the tool your agent used came out on top, with this graph and without it."
-              : `How often the tool your agent used came out on top, with this graph and on your ${reference.arm} ranking.`
-            : `How closely this graph's ranking follows your ${reference.arm} ranking. Agreement, not correctness.`}
-        {view.empty || metric === BOOST_DEFAULT_METRIC
-          ? null
-          : ` ${definition.label}: ${definition.hint.replace("the target", targetNoun)}.`}
-      </p>
+
       {view.empty ? null : (
         <p data-boost-verdict="true" className="mt-3 text-sm leading-6 text-cream">
           {verdictSentence(view, metric, definition.label)}
@@ -268,9 +253,7 @@ export function BoostPanel({ view }: { view: BoostView }) {
       )}
       {!view.empty && !view.reported && reference.arm === null ? (
         <p className="mt-1 text-xs text-warm-muted">
-          Only the graph's ranking is shown: your Ratel SDK records what it served, not the ranking
-          without the graph. With <code className="font-mono">base_hits</code> (next core release)
-          the baseline line appears beside it.
+          Graph ranking only: your SDK doesn't record the ranking without it yet.
         </p>
       ) : null}
       {!view.empty && view.estimated ? (
@@ -279,8 +262,8 @@ export function BoostPanel({ view }: { view: BoostView }) {
           className="mt-1 text-xs text-warm-muted"
         >
           {view.reported
-            ? "Searches the graph changed are what your runtime reported, with and without it. The rest are replayed locally on a BM25 index of your catalog (your @ratel-ai/sdk), with and without the graph as it stood at each search."
-            : "Estimated by replaying your searches locally on a BM25 index of your catalog (your @ratel-ai/sdk), with and without the graph as it stood at each search. Your runtime's own ranking may differ."}
+            ? "Reported by your runtime where the graph changed a search; the rest replayed locally (BM25)."
+            : "Estimated: searches replayed locally (BM25). Your runtime's ranking may differ."}
         </p>
       ) : null}
 

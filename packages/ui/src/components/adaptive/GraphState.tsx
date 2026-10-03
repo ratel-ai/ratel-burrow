@@ -81,20 +81,17 @@ export function GraphState({
   return (
     <p className="flex flex-wrap items-center gap-2 text-xs text-warm-muted">
       <span
+        title={label.hint}
         className={`inline-flex items-center rounded border bg-forest/30 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide ${
           label.live ? "border-green/40 text-green" : "border-forest-300 text-warm-muted"
         }`}
       >
         {label.label}
       </span>
-      <span>
-        {label.hint}
-        {state.liveSince ? ` Live since ${fmt(state.liveSince)}.` : ""}
-        {state.boostingSince ? ` First changed a search ${fmt(state.boostingSince)}.` : ""}
-        {seededShare !== null && seededShare > 0
-          ? ` ${Math.round(seededShare * 100)}% of its observations were seeded offline.`
-          : ""}
-      </span>
+      {state.liveSince ? <span>since {fmt(state.liveSince)}</span> : null}
+      {seededShare !== null && seededShare > 0 ? (
+        <span>· {Math.round(seededShare * 100)}% seeded offline</span>
+      ) : null}
     </p>
   );
 }
