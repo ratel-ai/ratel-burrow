@@ -1,4 +1,5 @@
 import {
+  buildAgentHealth,
   formatBytes,
   formatCount,
   formatMs,
@@ -6,8 +7,11 @@ import {
   relativeTime,
 } from "@ratel-ai/burrow-model";
 import { AlertTriangle, CircleCheck, CircleX, KeyRound, Server } from "lucide-react";
+import { useMemo } from "react";
 import { TimeChart } from "../components/charts";
-import { Card, Code, Empty, KindDot, PageHeader, Pill, Tile } from "../components/ui";
+import { HealthBand } from "../components/health/HealthBand";
+import { TurnShapes } from "../components/health/TurnShapes";
+import { Card, Code, Empty, KindDot, Pill, Tile } from "../components/ui";
 import { useBurrow } from "../lib/data";
 import { href } from "../lib/route";
 
@@ -19,7 +23,8 @@ const AUTH_LABEL = {
 };
 
 export function HealthScreen() {
-  const { health, savings } = useBurrow();
+  const { health, savings, events, project } = useBurrow();
+  const agent = useMemo(() => buildAgentHealth(events), [events]);
   const errorRate = health.totals.invocations
     ? health.totals.errors / health.totals.invocations
     : null;
@@ -27,17 +32,31 @@ export function HealthScreen() {
 
   return (
     <div className="space-y-6">
-      <PageHeader eyebrow="Agent health" title="How fast, how reliable, how lean">
-        Search and tool-call latency, the MCP servers behind your catalog, and an estimate of the
-        context Ratel kept out of your model's window.
-      </PageHeader>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="eyebrow">Agent health{project ? ` · ${project}` : ""}</div>
+          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight">
+            How your agent found its tools
+          </h1>
+          <p className="mt-1 max-w-2xl text-sm text-warm-muted">
+            Each turn is one request: the searches it ran and the tools it called. Read from your
+            SDK's trace, the way Ratel Cloud reads it.
+          </p>
+        </div>
+        <span className="rounded-md border border-forest-300 bg-forest-600/60 px-2 py-1 font-mono text-[11px] text-cream-dim">
+          last {agent.windowDays} days · {agent.turns.toLocaleString("en-US")} turns
+        </span>
+      </header>
 
+      <HealthBand tiles={agent.tiles} />
+      <TurnShapes shapes={agent.shapes} turns={agent.turns} />
+
+      <div className="eyebrow pt-2">Runtime</div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile
           label="Search latency"
           value={formatMs(health.searchLatency.p50)}
           sub={`p95 ${formatMs(health.searchLatency.p95)} · ${formatCount(health.searchLatency.count)} searches`}
-          tone="green"
         />
         <Tile
           label="Call latency"

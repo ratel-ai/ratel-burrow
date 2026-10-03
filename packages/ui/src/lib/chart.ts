@@ -62,3 +62,36 @@ export function labelEvery(count: number, target = 7): (i: number) => boolean {
   const step = Math.max(1, Math.ceil(count / target));
   return (i: number) => (count - 1 - i) % step === 0;
 }
+
+/** A smooth filled-area path: the curve, then straight down to `baseY` and back. */
+export function areaPath(pts: readonly (readonly [number, number])[], baseY: number): string {
+  if (pts.length === 0) return "";
+  const line = smoothPath(pts);
+  const last = pts[pts.length - 1]?.[0] ?? 0;
+  const first = pts[0]?.[0] ?? 0;
+  return `${line} L${round(last)},${round(baseY)} L${round(first)},${round(baseY)} Z`;
+}
+
+/** Map a series of values to [x, y] pixel points within a plot box. */
+export function toPoints(
+  values: readonly number[],
+  opts: { width: number; height: number; padTop: number; max: number },
+): [number, number][] {
+  const { width, height, padTop, max } = opts;
+  const innerH = height - padTop;
+  const stepX = values.length > 1 ? width / (values.length - 1) : 0;
+  const y = (v: number) => padTop + innerH - (max > 0 ? (v / max) * innerH : 0);
+  return values.map((v, i) => [values.length > 1 ? i * stepX : width / 2, y(v)]);
+}
+
+/** Runs of consecutive measured values, so a line breaks over gaps: `[1, null, 2, 3]` → `[[0], [2, 3]]`. */
+export function gapSegments(values: readonly (number | null)[]): number[][] {
+  const runs: number[][] = [];
+  values.forEach((value, index) => {
+    if (value === null) return;
+    const last = runs.at(-1);
+    if (last && last.at(-1) === index - 1) last.push(index);
+    else runs.push([index]);
+  });
+  return runs;
+}
