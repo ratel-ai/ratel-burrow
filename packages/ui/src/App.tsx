@@ -1,5 +1,5 @@
 import { RANGES, relativeTime, type TimeRange } from "@ratel-ai/burrow-model";
-import { Activity, BookOpen, Eye, Home, type LucideIcon, Orbit } from "lucide-react";
+import { Activity, BookOpen, ExternalLink, Eye, Home, type LucideIcon, Orbit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BadgerMark, BurrowMascot } from "./components/Mascot";
 import { ProjectSwitcher } from "./components/ProjectSwitcher";
@@ -141,6 +141,14 @@ function Shell() {
           ))}
         </nav>
         <div className="mt-auto space-y-2 px-2 text-xs text-warm-muted">
+          <a
+            href="https://docs.ratel.sh/"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 transition-colors hover:text-cream"
+          >
+            <ExternalLink className="size-3.5" /> Ratel docs
+          </a>
           <div className="flex items-center gap-2">
             <Eye className="size-3.5" /> Read-only
           </div>

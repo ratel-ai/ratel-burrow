@@ -21,6 +21,8 @@ Every page reads the same time range (24h, 7d, 30d or all), ending at the latest
 
 ## Quickstart
 
+New to Ratel itself? Start with the [Ratel docs](https://docs.ratel.sh/).
+
 Burrow is for the open-source Ratel SDK (TypeScript and Python). Point Ratel's own trace sink
 at a Burrow dir (`./.ratel/burrow`), then run Burrow there.
 
