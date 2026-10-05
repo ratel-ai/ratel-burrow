@@ -52,7 +52,7 @@ export function ClusterDrawer({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close pattern details"
+          aria-label="Close cluster details"
           className="rounded-md p-1.5 text-warm-muted transition-colors hover:bg-forest/60 hover:text-cream"
         >
           <X size={16} aria-hidden />
@@ -61,21 +61,21 @@ export function ClusterDrawer({
 
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-5 text-xs text-cream-dim">
         <dl className="grid grid-cols-2 gap-3">
-          <Fact label="Searches" hint={FACT_HINTS.support}>
+          <Fact label="Support" hint={FACT_HINTS.support}>
             <span className="inline-flex items-center gap-2 tabular-nums text-cream">
               {row.support}
               <SupportRamp support={row.support} />
             </span>
           </Fact>
-          <Fact label="Built offline" hint={FACT_HINTS.seeded}>
+          <Fact label="Seeded" hint={FACT_HINTS.seeded}>
             <span className="tabular-nums">
               {row.seededSupport} of {row.support}
             </span>
           </Fact>
-          <Fact label="Ways users asked" hint={FACT_HINTS.members}>
+          <Fact label="Members" hint={FACT_HINTS.members}>
             <span className="tabular-nums">{row.memberCount}</span>
           </Fact>
-          <Fact label="Tools that answered" hint={FACT_HINTS.edges}>
+          <Fact label="Edges" hint={FACT_HINTS.edges}>
             <span className="tabular-nums">
               <span className="text-green">{row.toolEdgeCount}</span> tools ·{" "}
               <span className="text-coral">{row.skillEdgeCount}</span> skills
@@ -143,13 +143,13 @@ const EDGES_IN_VIEW = 6;
 
 const FACT_HINTS = {
   support:
-    "Confirmed searches behind this pattern. A search counts once when a tool or skill was invoked after it, however many were invoked. The bars show the ranking weight: it ramps up and reaches full weight at 3.",
+    "Confirmed searches behind this cluster. A search counts once when a tool or skill was invoked after it, however many were invoked. The bars show the ranking weight: it ramps up and reaches full weight at 3.",
   seeded:
     "How many of those searches came from an offline seeding pass over a captured baseline, rather than live searches Ratel served. Provenance only: seeded and live observations rank the same.",
   members:
-    "Past query phrasings this pattern keeps as its match key. A new query joins the pattern when it resembles them closely enough. The list is capped, so long-lived patterns keep their most recent phrasings.",
+    "Past query phrasings this cluster keeps as its match key. A new query joins the cluster when it resembles them closely enough. The list is capped, so long-lived clusters keep their most recent phrasings.",
   edges:
-    "The tools and skills invoked after this pattern's searches, each weighted by how often. This is what learning promotes when a query matches the pattern. Where the graph recorded impressions, 'passed over' counts the times a capability ranked at or above the pick without being chosen, and the damper is how much of its weight survives: min(1, (invoked + 3) / (passed over + 3)).",
+    "The tools and skills invoked after this cluster's searches, each weighted by how often. This is what the usage arm promotes when a query matches the cluster. Where the graph recorded impressions, 'passed over' counts the times a capability ranked at or above the pick without being chosen, and the damper is how much of its weight survives: min(1, (invoked + 3) / (passed over + 3)).",
 } as const;
 
 function Fact({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {

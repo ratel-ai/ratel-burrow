@@ -14,9 +14,8 @@ the intent graph — and renders them in your browser. It never changes your Rat
   result was right, what search missed, and what to fix first.
 - **Searches**: every query, what it returned (with each result's relevance), and what the agent
   called next. Problems come first.
-- **Tools**: your catalog with per-tool health (first result %, misses) and a "needs attention"
-  filter, plus each entry's description, searchable text and schemas.
-- **Learning**: whether adaptive ranking helped, and the request patterns it learned in plain text.
+- **Catalogs**: tools, skills and facts with their description, searchable text and schemas.
+- **Adaptive ranking**: the intent graph Ratel learns from usage, and whether it's helping.
 
 Every page reads the same time range (24h, 7d, 30d or all), ending at the latest event.
 

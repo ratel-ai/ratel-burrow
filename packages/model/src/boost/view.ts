@@ -58,21 +58,16 @@ export function boostExperimentName(graphKey: string): string {
 
 export type BoostMetric = "recall@1" | "recall@3" | "recall@5" | "ndcg@5" | "mrr@5";
 
-/** Plain labels; the Cloud names (Recall@1, nDCG@5, MRR@5) live in the hints. */
 export const BOOST_METRICS: ReadonlyArray<{ id: BoostMetric; label: string; hint: string }> = [
-  {
-    id: "recall@1",
-    label: "First result right",
-    hint: "the target was the first result (Recall@1)",
-  },
-  { id: "recall@3", label: "In top 3", hint: "the target was in the top 3 (Recall@3)" },
-  { id: "recall@5", label: "In results", hint: "the target was in the list (Recall@5)" },
+  { id: "recall@1", label: "Recall@1", hint: "the target was the first result" },
+  { id: "recall@3", label: "Recall@3", hint: "the target was in the top 3" },
+  { id: "recall@5", label: "Recall@5", hint: "the target was in the list" },
   {
     id: "ndcg@5",
-    label: "Ranking quality",
-    hint: "rank credit, 1 at rank 1, 0.63 at rank 2, 0 when absent (nDCG@5)",
+    label: "nDCG@5",
+    hint: "rank credit, 1 at rank 1, 0.63 at rank 2, 0 when absent",
   },
-  { id: "mrr@5", label: "Average position", hint: "mean reciprocal rank (MRR@5)" },
+  { id: "mrr@5", label: "MRR@5", hint: "mean reciprocal rank" },
 ];
 
 /** The metric the panel opens on. */

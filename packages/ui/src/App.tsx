@@ -15,10 +15,10 @@ import { OverviewScreen } from "./screens/Overview";
 const NAV: { group: string; items: { page: Page; label: string; icon: LucideIcon }[] }[] = [
   { group: "Project", items: [{ page: "overview", label: "Summary", icon: Home }] },
   { group: "Observability", items: [{ page: "inspector", label: "Searches", icon: Activity }] },
-  { group: "Capabilities", items: [{ page: "catalog", label: "Tools", icon: BookOpen }] },
+  { group: "Capabilities", items: [{ page: "catalog", label: "Catalogs", icon: BookOpen }] },
   {
     group: "Continuous improvement",
-    items: [{ page: "adaptive", label: "Learning", icon: Orbit }],
+    items: [{ page: "adaptive", label: "Adaptive ranking", icon: Orbit }],
   },
 ];
 

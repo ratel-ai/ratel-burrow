@@ -29,8 +29,7 @@ without a scale.
   `ranked` is calls whose rank is knowable. Labels and hints live in `packages/ui/src/lib/terms.ts`.
 - **Needs attention** (`needsAttention` in `catalog-table.ts`) uses the same thresholds as the
   Summary's "What to improve" (`MIN_PATTERN`, `LOW_RANK_AFTER` in `improvements.ts`): missed ≥ 2,
-  mostly ranked below the top 3, or failed ≥ 2. The Summary's count and the Tools filter count are
-  therefore the same number.
+  mostly ranked below the top 3, or failed ≥ 2, so the Summary's verdict and its list agree.
 - **Relevance = share of the top hit**: each hit's score ÷ the best score in its own search,
   clamped to 0..1, so the top hit is 100% (`relevance.ts`). This is Ratel Cloud's Playground peek,
   and it is exact from today's traces, which record only raw scores. Raw scores stay available on
@@ -43,7 +42,7 @@ without a scale.
 
 ## Consequences
 
-- Numbers agree across Summary, Searches and Tools. A change to a definition is made in one
+- Numbers agree across Summary and Searches. A change to a definition is made in one
   place, with tests.
 - Skill calls now count alongside tool calls, which moves the Overview's old figures slightly.
 - Cloud's turn-level `first_try` tile and turn shapes stay in the model as a port, but the UI no

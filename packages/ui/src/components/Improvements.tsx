@@ -141,10 +141,10 @@ function Group({
       ) : null}
       {open && kind !== "empty_searches" ? (
         <a
-          href={href("catalog", { tab: "tools", attention: "1" })}
+          href={href("catalog", { tab: "tools" })}
           className="mb-3 ml-7 inline-block text-xs text-green hover:underline"
         >
-          Open these in Tools →
+          Open the tool catalog →
         </a>
       ) : null}
       {open && kind === "empty_searches" ? (

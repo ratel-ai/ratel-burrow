@@ -36,7 +36,7 @@ export function OverviewScreen() {
   const first = firstResultRate(outcomes);
   const inResults = inResultsRate(outcomes);
   const prev = previous?.outcomes ?? null;
-  // Same rule as the Tools page's "Needs attention" filter, so the counts match.
+  // Same thresholds as "What to improve" (needsAttention), so the counts agree.
   const attention = [...byTool.values()].filter(needsAttention).length;
 
   if (status === "ready" && sources.length === 0) return <SetupGuide />;

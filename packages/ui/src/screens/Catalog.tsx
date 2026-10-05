@@ -1,34 +1,27 @@
 import {
   type CatalogEntry,
   type CatalogView,
-  callOutcomes,
   catalogTableParams,
-  firstResultRate,
+  definitionTokens,
   formatCount,
-  formatPercent,
-  needsAttention,
-  outcomesByCapability,
   resolveCatalogView,
-  summarizeOutcomes,
 } from "@ratel-ai/burrow-model";
 import {
   ArrowUpRight,
   BookOpen,
   Database,
+  Hash,
   type LucideIcon,
   Parentheses,
   RadioTower,
-  Target,
-  TriangleAlert,
+  Search,
   Wrench,
 } from "lucide-react";
-import { useMemo } from "react";
 import { CatalogTable } from "../components/catalog/CatalogTable";
 import { EntryModal } from "../components/catalog/EntryModal";
-import { Code, cx } from "../components/ui";
+import { Code } from "../components/ui";
 import { useBurrow } from "../lib/data";
 import { href, useRoute } from "../lib/route";
-import { TERMS } from "../lib/terms";
 
 type Kind = "tools" | "skills" | "facts";
 
@@ -71,19 +64,16 @@ const KINDS: Record<
 
 export function CatalogScreen() {
   const { params } = useRoute();
-  const { catalog } = useBurrow();
   const tab = params.get("tab");
-  // With only tools, an index of one card is a click for nothing.
-  const kinds = (["skills", "tools", "facts"] as const).filter((k) => catalog[k].length > 0);
-  const single = kinds.length <= 1;
-  if (tab === "tools" || tab === "skills" || tab === "facts")
-    return <CatalogPage kind={tab} params={params} single={single} />;
-  if (single) return <CatalogPage kind={kinds[0] ?? "tools"} params={params} single />;
-  return <CatalogIndex kinds={kinds} />;
+  return tab === "tools" || tab === "skills" || tab === "facts" ? (
+    <CatalogPage kind={tab} params={params} />
+  ) : (
+    <CatalogIndex />
+  );
 }
 
 /** Ratel Cloud's catalog index: one card per catalog. */
-function CatalogIndex({ kinds }: { kinds: readonly Kind[] }) {
+function CatalogIndex() {
   const { catalog } = useBurrow();
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-7">
@@ -94,7 +84,7 @@ function CatalogIndex({ kinds }: { kinds: readonly Kind[] }) {
         </h1>
       </header>
       <section aria-label="Project catalogs" className="grid gap-3 md:grid-cols-3">
-        {kinds.map((kind) => {
+        {(["skills", "tools", "facts"] as const).map((kind) => {
           const meta = KINDS[kind];
           const Icon = meta.icon;
           return (
@@ -142,19 +132,8 @@ function CatalogIndex({ kinds }: { kinds: readonly Kind[] }) {
   );
 }
 
-function CatalogPage({
-  kind,
-  params,
-  single,
-}: {
-  kind: Kind;
-  params: URLSearchParams;
-  /** The only catalog with entries: no "All catalogs" back link. */
-  single: boolean;
-}) {
-  const { catalog, sessions } = useBurrow();
-  const outcomeList = useMemo(() => callOutcomes(sessions), [sessions]);
-  const health = useMemo(() => outcomesByCapability(outcomeList), [outcomeList]);
+function CatalogPage({ kind, params }: { kind: Kind; params: URLSearchParams }) {
+  const { catalog } = useBurrow();
   const meta = KINDS[kind];
   const entries = catalog[kind];
   const view = resolveCatalogView(Object.fromEntries(params));
@@ -171,24 +150,25 @@ function CatalogPage({
     go({ ...merged, offset: (merged.page - 1) * merged.pageSize }, {}, replace);
   };
 
-  const totals = summarizeOutcomes(
-    outcomeList.filter((o) => `${o.kind}s` === kind && entries.some((e) => e.id === o.id)),
+  const totals = entries.reduce(
+    (sum, e) => ({
+      calls: sum.calls + e.stats.invoked,
+      retrieved: sum.retrieved + e.stats.retrieved,
+      tokens: sum.tokens + (e.removed ? 0 : (definitionTokens(e) ?? 0)),
+    }),
+    { calls: 0, retrieved: 0, tokens: 0 },
   );
-  const first = firstResultRate(totals);
-  const attention = entries.filter((e) => needsAttention(health.get(`${e.kind}:${e.id}`))).length;
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div className="flex flex-col gap-5">
-        {single ? null : (
-          <a
-            href={href("catalog")}
-            className="inline-flex w-fit items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-warm-muted transition-colors hover:text-cream"
-          >
-            <span aria-hidden>←</span>
-            All catalogs
-          </a>
-        )}
+        <a
+          href={href("catalog")}
+          className="inline-flex w-fit items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-warm-muted transition-colors hover:text-cream"
+        >
+          <span aria-hidden>←</span>
+          All catalogs
+        </a>
         <header className="flex flex-wrap items-end justify-between gap-5">
           <div>
             <div className="eyebrow">{meta.title.slice(0, -1)} catalog</div>
@@ -196,6 +176,10 @@ function CatalogPage({
               {meta.title}
             </h1>
           </div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-forest-300 bg-forest-600/55 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.09em] text-cream-dim">
+            <span className="size-1.5 rounded-full bg-green" aria-hidden />
+            Live from traces
+          </span>
         </header>
       </div>
 
@@ -209,17 +193,11 @@ function CatalogPage({
           label={meta.callsLabel}
           value={formatCount(totals.calls)}
         />
+        <SummaryDatum icon={Search} label="Retrieved" value={formatCount(totals.retrieved)} />
         <SummaryDatum
-          icon={Target}
-          label={TERMS.firstResult.label}
-          value={first === null ? "–" : formatPercent(first)}
-        />
-        <SummaryDatum
-          icon={TriangleAlert}
-          label="Need attention"
-          value={formatCount(attention)}
-          tone={attention ? "amber" : undefined}
-          href={attention ? href("catalog", { tab: kind, attention: "1" }) : undefined}
+          icon={Hash}
+          label="Definition tokens"
+          value={catalog.hasDefinitions ? `~${formatCount(totals.tokens)}` : "–"}
         />
       </section>
 
@@ -250,22 +228,12 @@ function CatalogPage({
           callsLabel={meta.callsLabel}
           entries={entries}
           view={view}
-          health={health}
           onChange={update}
           onOpen={(entry: CatalogEntry) => go(view, { id: entry.id })}
         />
       )}
 
-      {selected ? (
-        <EntryModal
-          entry={selected}
-          outcomes={health.get(`${selected.kind}:${selected.id}`)}
-          missedExamples={outcomeList
-            .filter((o) => o.id === selected.id && o.outcome === "missed")
-            .slice(0, 3)}
-          onClose={() => go(view)}
-        />
-      ) : null}
+      {selected ? <EntryModal entry={selected} onClose={() => go(view)} /> : null}
     </div>
   );
 }
@@ -274,45 +242,22 @@ function SummaryDatum({
   icon: Icon,
   label,
   value,
-  tone,
-  href: link,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
-  tone?: "amber";
-  href?: string;
 }) {
-  const body = (
-    <>
-      <Icon
-        className={cx("size-4 shrink-0", tone ? "text-amber" : "text-warm-muted")}
-        strokeWidth={1.6}
-        aria-hidden
-      />
+  return (
+    <div className="flex min-h-20 items-center gap-3 bg-base-deep p-4">
+      <Icon className="size-4 shrink-0 text-warm-muted" strokeWidth={1.6} aria-hidden />
       <div>
         <div className="font-mono text-[9px] uppercase tracking-[0.09em] text-warm-muted">
           {label}
         </div>
-        <div
-          className={cx(
-            "mt-1 font-display text-2xl font-semibold leading-none tabular",
-            tone ? "text-amber" : "text-cream",
-          )}
-        >
+        <div className="mt-1 font-display text-2xl font-semibold leading-none text-cream tabular">
           {value}
         </div>
       </div>
-    </>
-  );
-  return link ? (
-    <a
-      href={link}
-      className="flex min-h-20 items-center gap-3 bg-base-deep p-4 hover:bg-forest-600"
-    >
-      {body}
-    </a>
-  ) : (
-    <div className="flex min-h-20 items-center gap-3 bg-base-deep p-4">{body}</div>
+    </div>
   );
 }
