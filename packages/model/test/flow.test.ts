@@ -30,12 +30,12 @@ describe("buildRatelFlow", () => {
     expect(flowFor().search).toMatchObject({ searches: 2, avgReturned: 1.5, catalogSize: 2 });
   });
 
-  it("measures where the called tool sat in the search before it", () => {
+  it("measures where the called tool or skill sat in the search before it", () => {
     expect(flowFor().call).toEqual({
-      calls: 2,
-      ranked: 2,
-      topHit: 0,
-      inResults: 1,
+      calls: 3,
+      ranked: 3,
+      topHit: 1,
+      inResults: 2,
       notRetrieved: 1,
       failed: 1,
     });

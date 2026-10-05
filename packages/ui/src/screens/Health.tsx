@@ -1,5 +1,6 @@
 import {
   buildAgentHealth,
+  callOutcomes,
   formatBytes,
   formatCount,
   formatMs,
@@ -7,6 +8,7 @@ import {
   type HealthTile,
   relativeTime,
   type SessionTimeline,
+  summarizeOutcomes,
 } from "@ratel-ai/burrow-model";
 import { AlertTriangle } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -24,22 +26,10 @@ const AUTH_LABEL = {
 
 const TOP_TOOLS = 10;
 
-/** Where each called tool sat in the search before it, across every session. */
+/** Where each called tool sat in the search before it: the shared definition. */
 function rankMix(sessions: readonly SessionTimeline[]) {
-  const mix = { first: 0, top: 0, lower: 0, missed: 0, calls: 0 };
-  for (const session of sessions) {
-    for (const search of session.searches) {
-      if (search.kind !== "tool") continue;
-      for (const call of search.invocations) {
-        mix.calls += 1;
-        if (call.rank === null) mix.missed += 1;
-        else if (call.rank === 1) mix.first += 1;
-        else if (call.rank <= 3) mix.top += 1;
-        else mix.lower += 1;
-      }
-    }
-  }
-  return mix;
+  const o = summarizeOutcomes(callOutcomes(sessions));
+  return { first: o.first, top: o.top3, lower: o.lower, missed: o.missed, calls: o.ranked };
 }
 
 const MIX_PARTS = [
@@ -55,7 +45,6 @@ export function HealthScreen() {
   const agent = useMemo(() => buildAgentHealth(events), [events]);
   const mix = useMemo(() => rankMix(sessions), [sessions]);
   const tile = (key: HealthTile["key"]) => agent.tiles.find((t) => t.key === key);
-  const firstTry = tile("first_try");
   const detours = tile("detours");
   const junk = tile("junk");
   const wasted = tile("wasted_calls");
@@ -90,17 +79,13 @@ export function HealthScreen() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
-          label="Found on first search"
-          value={pct(firstTry?.value)}
-          sub={
-            firstTry?.value != null
-              ? `${firstTry.count} of ${firstTry.n} turns`
-              : "needs more turns"
-          }
+          label="First result right"
+          value={mix.calls ? formatPercent(mix.first / mix.calls) : "–"}
+          sub={`${formatCount(mix.first)} of ${formatCount(mix.calls)} calls`}
           tone="green"
         />
         <Kpi
-          label="Called tool was in results"
+          label="In results"
           value={mix.calls ? formatPercent((mix.calls - mix.missed) / mix.calls) : "–"}
           sub={`${formatCount(mix.missed)} calls it wasn't`}
           tone={mix.calls && mix.missed / mix.calls > 0.2 ? "amber" : "green"}

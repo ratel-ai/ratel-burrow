@@ -253,7 +253,7 @@ export function tilesFor(
 }
 
 const SHAPE_COPY: Record<TurnShapeKind, { label: string; description: string }> = {
-  direct: { label: "Direct", description: "Searched once and ran the right tool." },
+  direct: { label: "Direct", description: "Searched once, then ran a tool." },
   detour: { label: "Detour", description: "Searched again for the same thing." },
   dead_end: { label: "Dead end", description: "Searched and ran nothing." },
   retry: { label: "Retry", description: "Ran a tool, it failed, ran it again." },

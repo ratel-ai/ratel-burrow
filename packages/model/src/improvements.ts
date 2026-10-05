@@ -96,6 +96,9 @@ export function buildImprovements(input: {
       searchCount += 1;
       if (s.kind === "tool" || s.kind === "skill") searchesByKind[s.kind] += 1;
       if (s.hitCount === 0) empty.push(example(s));
+      if (s.kind !== "tool" && s.kind !== "skill") continue;
+      // A count-only (gateway) search leaves the rank unknowable: see search-outcomes.ts.
+      const knowsHits = s.hits.length > 0 || s.hitCount === 0;
       for (const inv of s.invocations) {
         const key = `${inv.kind}:${inv.id}`;
         let t = tallies.get(key);
@@ -113,7 +116,9 @@ export function buildImprovements(input: {
           tallies.set(key, t);
         }
         t.calls += 1;
-        if (inv.rank === null) t.missed.push(example(s));
+        if (!knowsHits) {
+          // Rank unknowable: only failures count.
+        } else if (inv.rank === null) t.missed.push(example(s));
         else {
           t.ranks.push(inv.rank);
           if (inv.rank > LOW_RANK_AFTER) t.low.push(example(s));

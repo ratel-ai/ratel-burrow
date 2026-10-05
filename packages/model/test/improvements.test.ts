@@ -70,6 +70,12 @@ describe("buildImprovements", () => {
     ]);
   });
 
+  it("does not count calls after a count-only search as missed", () => {
+    const gateway = (q: string) => ({ ...search(q, [], [call("g", null)]), hitCount: 4 });
+    const sessions = [session([gateway("a"), gateway("b"), gateway("c")])];
+    expect(buildImprovements({ catalog: catalog([]), sessions })).toEqual([]);
+  });
+
   it("needs a pattern, not one miss", () => {
     const sessions = [session([search("q", ["a"], [call("x", null)])])];
     expect(buildImprovements({ catalog: catalog([]), sessions })).toEqual([]);

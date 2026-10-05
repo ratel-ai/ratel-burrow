@@ -4,6 +4,7 @@ import type { Catalog } from "./catalog.js";
 import type { SessionTimeline } from "./inspector.js";
 import type { IntentGraphDocument } from "./intent-graph/wire.js";
 import type { SavingsEstimate } from "./savings.js";
+import { callOutcomes, summarizeOutcomes } from "./search-outcomes.js";
 
 /**
  * How Ratel works, in one project's numbers: the five steps the Overview walks
@@ -24,7 +25,7 @@ export interface RatelFlow {
     tokensSavedPerSearch: number;
   };
   call: {
-    /** Tool calls made after a search. */
+    /** Tool and skill calls made after a search. */
     calls: number;
     /** Of those, calls whose search recorded its hits, so a rank is known. */
     ranked: number;
@@ -53,20 +54,15 @@ export function buildRatelFlow(input: {
   const { catalog, sessions, savings, boost, boostStats, graph } = input;
   const live = (list: Catalog["tools"]) => list.filter((e) => !e.removed).length;
 
-  const call = { calls: 0, ranked: 0, topHit: 0, inResults: 0, notRetrieved: 0, failed: 0 };
-  for (const s of sessions.flatMap((t) => t.searches)) {
-    if (s.kind !== "tool") continue;
-    const knowsHits = s.hits.length > 0 || s.hitCount === 0;
-    for (const c of s.invocations) {
-      call.calls += 1;
-      if (c.error !== null) call.failed += 1;
-      if (!knowsHits) continue;
-      call.ranked += 1;
-      if (c.rank === 1) call.topHit += 1;
-      if (c.rank !== null) call.inResults += 1;
-      else call.notRetrieved += 1;
-    }
-  }
+  const outcomes = summarizeOutcomes(callOutcomes(sessions));
+  const call = {
+    calls: outcomes.calls,
+    ranked: outcomes.ranked,
+    topHit: outcomes.first,
+    inResults: outcomes.ranked - outcomes.missed,
+    notRetrieved: outcomes.missed,
+    failed: outcomes.failed,
+  };
 
   let learn: RatelFlow["learn"] = null;
   if (graph) {

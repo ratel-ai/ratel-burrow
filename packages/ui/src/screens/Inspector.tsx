@@ -1,4 +1,5 @@
 import {
+  callOutcomes,
   formatMs,
   formatPercent,
   type LinkedInvocation,
@@ -6,6 +7,7 @@ import {
   relativeTime,
   type SearchRecord,
   type SessionTimeline,
+  summarizeOutcomes,
 } from "@ratel-ai/burrow-model";
 import { AlertTriangle, ArrowRight, CircleCheck, CircleX, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -124,19 +126,15 @@ export function InspectorScreen() {
 
 /** Where the called tool sat in its search, per session: the inspector's one-line health read. */
 function rankMix(session: SessionTimeline) {
-  const mix = { first: 0, top: 0, lower: 0, missed: 0, failed: 0, calls: 0 };
-  for (const search of session.searches) {
-    if (search.kind !== "tool" || (search.hits.length === 0 && search.hitCount > 0)) continue;
-    for (const call of search.invocations) {
-      mix.calls += 1;
-      if (call.error) mix.failed += 1;
-      if (call.rank === null) mix.missed += 1;
-      else if (call.rank === 1) mix.first += 1;
-      else if (call.rank <= 3) mix.top += 1;
-      else mix.lower += 1;
-    }
-  }
-  return mix;
+  const o = summarizeOutcomes(callOutcomes([session]));
+  return {
+    first: o.first,
+    top: o.top3,
+    lower: o.lower,
+    missed: o.missed,
+    failed: o.failed,
+    calls: o.ranked,
+  };
 }
 
 const MIX_PARTS = [
