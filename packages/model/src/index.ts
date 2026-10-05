@@ -18,6 +18,7 @@ export * from "./inspector.js";
 export * from "./intent-graph/index.js";
 export * from "./invocations.js";
 export * from "./projects.js";
+export * from "./relevance.js";
 export * from "./savings.js";
 export * from "./search-outcomes.js";
 export * from "./stats.js";

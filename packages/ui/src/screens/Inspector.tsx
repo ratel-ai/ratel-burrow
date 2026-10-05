@@ -5,18 +5,22 @@ import {
   type LinkedInvocation,
   plural,
   relativeTime,
+  relevanceOf,
   type SearchRecord,
   type SessionTimeline,
   summarizeOutcomes,
 } from "@ratel-ai/burrow-model";
-import { AlertTriangle, ArrowRight, CircleCheck, CircleX, Sparkles } from "lucide-react";
+import { ChevronRight, CircleCheck, CircleX, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScoreBar } from "../components/charts";
 import { Card, cx, Empty, KindDot, PageHeader, Pill, SearchInput, Tabs } from "../components/ui";
 import { useBurrow } from "../lib/data";
 import { href, useRoute } from "../lib/route";
+import { TERMS } from "../lib/terms";
 
-type Filter = "all" | "called" | "problems";
+type Filter = "problems" | "called" | "all";
+const FILTERS: Filter[] = ["problems", "called", "all"];
+const PAGE = 100;
 
 const KIND_COLOR = {
   tool: "var(--color-cap-tool)",
@@ -31,6 +35,21 @@ function hasProblem(s: SearchRecord): boolean {
   );
 }
 
+/** What happened after a search, in one pill. */
+function outcomeOf(s: SearchRecord): {
+  label: string;
+  tone: "green" | "amber" | "coral" | "muted";
+} {
+  if (s.hitCount === 0) return { label: "No results", tone: "amber" };
+  const call = s.invocations[0];
+  if (!call) return { label: "No call", tone: "muted" };
+  if (call.error !== null) return { label: "Failed", tone: "coral" };
+  if (s.hits.length === 0) return { label: "Called", tone: "muted" };
+  if (call.rank === null) return { label: "Missed", tone: "coral" };
+  if (call.rank === 1) return { label: "First result", tone: "green" };
+  return { label: `#${call.rank}`, tone: call.rank <= 3 ? "green" : "amber" };
+}
+
 export function InspectorScreen() {
   const { sessions } = useBurrow();
   const { params } = useRoute();
@@ -38,7 +57,11 @@ export function InspectorScreen() {
   const sessionId = params.get("session") ?? (toolFilter ? null : (sessions[0]?.sessionId ?? null));
   const focusKey = params.get("search");
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
+  const [chosen, setChosen] = useState<Filter | null>(() => {
+    const f = params.get("filter");
+    return FILTERS.includes(f as Filter) ? (f as Filter) : null;
+  });
+  const [shown, setShown] = useState(PAGE);
 
   const session = sessions.find((s) => s.sessionId === sessionId) ?? null;
   const base = useMemo(() => {
@@ -50,6 +73,18 @@ export function InspectorScreen() {
     }
     return session ? [...session.searches].sort((a, b) => b.ts - a.ts) : [];
   }, [sessions, session, toolFilter]);
+
+  const counts = useMemo(
+    () => ({
+      problems: base.filter(hasProblem).length,
+      called: base.filter((s) => s.invocations.length > 0).length,
+      all: base.length,
+    }),
+    [base],
+  );
+  // Problems first when there are any: that's what the reader came to see.
+  const filter: Filter =
+    chosen ?? (focusKey || toolFilter ? "all" : counts.problems > 0 ? "problems" : "all");
 
   const searches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -67,35 +102,32 @@ export function InspectorScreen() {
 
   return (
     <div>
-      <PageHeader eyebrow="Search inspector" title="Every search, and what happened next" />
+      <PageHeader eyebrow="Searches" title="Every search, and what happened next" />
 
       {sessions.length === 0 ? (
         <Empty title="No searches yet">Searches appear here as soon as Ratel logs them.</Empty>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <SessionList
-            sessions={sessions}
-            activeId={toolFilter ? null : sessionId}
-            onFilter={setFilter}
-          />
-          <div className="min-w-0 space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Tabs<Filter>
-                  value={filter}
-                  onChange={setFilter}
-                  options={[
-                    { value: "all", label: "All" },
-                    { value: "called", label: "Led to a call" },
-                    { value: "problems", label: "Problems" },
-                  ]}
-                />
-                <SearchInput
-                  value={query}
-                  onChange={setQuery}
-                  placeholder="Filter by query or tool…"
-                />
-              </div>
+        <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+          <SessionList sessions={sessions} activeId={toolFilter ? null : sessionId} />
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Tabs<Filter>
+                value={filter}
+                onChange={(f) => {
+                  setChosen(f);
+                  setShown(PAGE);
+                }}
+                options={[
+                  { value: "problems", label: `Problems · ${counts.problems}` },
+                  { value: "called", label: `Led to a call · ${counts.called}` },
+                  { value: "all", label: `All · ${counts.all}` },
+                ]}
+              />
+              <SearchInput
+                value={query}
+                onChange={setQuery}
+                placeholder="Filter by query or tool…"
+              />
             </div>
             {toolFilter ? (
               <div className="flex items-center gap-2 text-sm">
@@ -113,9 +145,22 @@ export function InspectorScreen() {
             {searches.length === 0 ? (
               <Empty title="Nothing matches">Try another filter.</Empty>
             ) : (
-              searches.map((s) => (
-                <SearchCard key={s.key} search={s} focused={s.key === focusKey} />
-              ))
+              <>
+                <ul className="divide-y divide-forest-300/40 overflow-hidden rounded-xl border border-forest-300/60 bg-forest-600/70">
+                  {searches.slice(0, shown).map((s) => (
+                    <SearchRow key={s.key} search={s} focused={s.key === focusKey} />
+                  ))}
+                </ul>
+                {searches.length > shown ? (
+                  <button
+                    type="button"
+                    onClick={() => setShown((n) => n + PAGE)}
+                    className="text-xs text-green hover:underline"
+                  >
+                    Show {Math.min(PAGE, searches.length - shown)} more of {searches.length - shown}
+                  </button>
+                ) : null}
+              </>
             )}
           </div>
         </div>
@@ -124,285 +169,199 @@ export function InspectorScreen() {
   );
 }
 
-/** Where the called tool sat in its search, per session: the inspector's one-line health read. */
-function rankMix(session: SessionTimeline) {
-  const o = summarizeOutcomes(callOutcomes([session]));
-  return {
-    first: o.first,
-    top: o.top3,
-    lower: o.lower,
-    missed: o.missed,
-    failed: o.failed,
-    calls: o.ranked,
-  };
-}
-
 const MIX_PARTS = [
-  { key: "first", label: "rank 1", color: "bg-green" },
-  { key: "top", label: "rank 2–3", color: "bg-green/45" },
-  { key: "lower", label: "rank 4+", color: "bg-amber/70" },
-  { key: "missed", label: "not retrieved", color: "bg-coral/80" },
+  { key: "first", color: "bg-green" },
+  { key: "top3", color: "bg-green/45" },
+  { key: "lower", color: "bg-amber/70" },
+  { key: "missed", color: "bg-coral/80" },
 ] as const;
-
-function MixBar({ mix, className }: { mix: ReturnType<typeof rankMix>; className?: string }) {
-  if (mix.calls === 0)
-    return <div className={cx("h-1.5 rounded-full bg-forest-300/50", className)} />;
-  return (
-    <div className={cx("flex h-1.5 gap-px overflow-hidden rounded-full", className)} aria-hidden>
-      {MIX_PARTS.map((p) =>
-        mix[p.key] ? (
-          <div
-            key={p.key}
-            className={p.color}
-            style={{ width: `${(mix[p.key] / mix.calls) * 100}%` }}
-          />
-        ) : null,
-      )}
-    </div>
-  );
-}
 
 function SessionList({
   sessions,
   activeId,
-  onFilter,
 }: {
   sessions: SessionTimeline[];
   activeId: string | null;
-  onFilter: (f: Filter) => void;
 }) {
   const now = Date.now();
-  const active = sessions.find((s) => s.sessionId === activeId) ?? null;
   return (
-    <aside className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
-      <nav className="space-y-1.5">
-        <div className="eyebrow px-1 pb-1">Sessions · {sessions.length}</div>
-        {sessions.map((s) => {
-          const mix = rankMix(s);
-          return (
-            <a
-              key={s.sessionId}
-              href={href("inspector", { session: s.sessionId })}
-              className={cx(
-                "block rounded-lg border px-3 py-2.5 transition-colors",
-                s.sessionId === activeId
-                  ? "border-green/60 bg-forest-300/50"
-                  : "border-forest-300/60 bg-forest-600/60 hover:bg-forest-300/30",
-              )}
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate font-mono text-xs text-cream" title={s.sessionId}>
-                  {s.sessionId.slice(0, 8)}
-                </span>
-                <span className="shrink-0 text-[11px] text-warm-muted">
-                  {relativeTime(s.end, now)}
-                </span>
-              </div>
-              <div className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] text-warm-muted">
-                <span>{plural(s.stats.searches, "search", "searches")}</span>
-                <span>{plural(s.stats.invocations, "call")}</span>
-                {mix.calls ? (
-                  <span className="text-cream-dim">
-                    {formatPercent(mix.first / mix.calls)} first
-                  </span>
-                ) : null}
-                {s.stats.errors ? (
-                  <span className="text-coral">{s.stats.errors} failed</span>
-                ) : null}
-              </div>
-              <MixBar mix={mix} className="mt-2" />
-            </a>
-          );
-        })}
-      </nav>
-      {active ? <SessionSummary session={active} onFilter={onFilter} /> : null}
-    </aside>
-  );
-}
-
-/** The selected session at a glance: span, where called tools ranked, the tools it ran most. */
-function SessionSummary({
-  session,
-  onFilter,
-}: {
-  session: SessionTimeline;
-  onFilter: (f: Filter) => void;
-}) {
-  const mix = rankMix(session);
-  const tools = new Map<string, number>();
-  for (const s of session.searches)
-    for (const c of s.invocations) tools.set(c.id, (tools.get(c.id) ?? 0) + 1);
-  const topTools = [...tools].sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const problems = session.searches.filter(hasProblem).length;
-  const span = session.end - session.start;
-  return (
-    <section className="rounded-xl border border-forest-300/60 bg-forest-600/60 p-3.5">
-      <div className="eyebrow">This session</div>
-      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]">
-        <dt className="text-warm-muted">Started</dt>
-        <dd className="text-right font-mono text-cream-dim">
-          {new Date(session.start).toLocaleTimeString()}
-        </dd>
-        <dt className="text-warm-muted">Duration</dt>
-        <dd className="text-right font-mono text-cream-dim">{formatMs(span)}</dd>
-        <dt className="text-warm-muted">Project</dt>
-        <dd className="truncate text-right font-mono text-cream-dim">
-          {session.sourceId ?? "default"}
-        </dd>
-      </dl>
-      <div className="mt-3 text-[11px] text-warm-muted">Where the called tool ranked</div>
-      <MixBar mix={mix} className="mt-1.5 h-2" />
-      <ul className="mt-2 space-y-1 text-[11px]">
-        {MIX_PARTS.map((p) => (
-          <li key={p.key} className="flex items-center gap-2">
-            <span className={cx("inline-block size-2 rounded-sm", p.color)} aria-hidden />
-            <span className="text-cream-dim">{p.label}</span>
-            <span className="ml-auto font-mono text-warm-muted">
-              {mix[p.key]} · {mix.calls ? formatPercent(mix[p.key] / mix.calls) : "–"}
-            </span>
-          </li>
-        ))}
-      </ul>
-      {topTools.length ? (
-        <>
-          <div className="mt-3 text-[11px] text-warm-muted">Called most</div>
-          <ul className="mt-1.5 space-y-1">
-            {topTools.map(([id, n]) => (
-              <li key={id} className="flex items-center gap-2 text-[11px]">
-                <a
-                  href={href("catalog", { tab: "tools", id })}
-                  className="min-w-0 flex-1 truncate font-mono text-cream-dim hover:underline"
-                >
-                  {id}
-                </a>
-                <span className="font-mono text-warm-muted">{n}×</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
-      {problems ? (
-        <button
-          type="button"
-          onClick={() => onFilter("problems")}
-          className="mt-3 w-full rounded-md border border-amber/40 bg-amber/10 px-2 py-1.5 text-left text-[11px] text-cream-dim hover:bg-amber/20"
-        >
-          {problems} searches with a problem → show only those
-        </button>
-      ) : null}
-    </section>
-  );
-}
-
-function SearchCard({ search, focused }: { search: SearchRecord; focused: boolean }) {
-  const ref = useRef<HTMLElement>(null);
-  useEffect(() => {
-    if (focused) ref.current?.scrollIntoView({ block: "center" });
-  }, [focused]);
-  const top = Math.max(0, ...search.hits.map((h) => h.score)) || 1;
-  const called = new Map(search.invocations.map((c) => [c.id, c]));
-  const color = KIND_COLOR[search.kind];
-
-  return (
-    <article
-      ref={ref}
-      className={cx(
-        "rounded-xl border bg-forest-600/70 p-4",
-        focused ? "border-green/70" : "border-forest-300/60",
-      )}
-    >
-      <header className="flex flex-wrap items-start gap-x-3 gap-y-2">
-        <KindDot kind={search.kind} />
-        <div className="min-w-0 flex-1">
-          <div className="break-words text-[15px] text-cream">
-            {search.query || <em className="text-warm-muted">empty query</em>}
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Pill>{search.kind} search</Pill>
-            <Pill>{search.origin}</Pill>
-            <Pill>top {search.topK}</Pill>
-            <Pill>{formatMs(search.tookMs)}</Pill>
-            {search.stages.map((st) => (
-              <Pill
-                key={st.name}
-                title={st.top_score === null ? "no hits" : `top score ${st.top_score.toFixed(3)}`}
-              >
-                {st.name} {formatMs(st.took_ms)}
-              </Pill>
-            ))}
-            {search.boost ? (
-              search.boost.intent ? (
-                <Pill
-                  tone="green"
-                  title={`similarity ${search.boost.similarity.toFixed(2)} · support ${search.boost.support}`}
-                >
-                  <Sparkles className="size-3" /> {search.boost.intent} · {search.boost.promoted}{" "}
-                  promoted
-                </Pill>
-              ) : (
-                <Pill title="Adaptive ranking found no matching intent">no intent match</Pill>
-              )
-            ) : null}
-          </div>
-        </div>
-        <span className="font-mono text-[11px] text-warm-muted">
-          {new Date(search.ts).toLocaleString()}
-        </span>
-      </header>
-
-      <div className="mt-3 space-y-1">
-        {search.hits.length === 0 ? (
-          <div className="flex items-center gap-2 text-sm text-warm-muted">
-            {search.hitCount === 0 ? (
-              <>
-                <AlertTriangle className="size-4 text-amber" /> No hits: nothing in the catalog
-                matched this query.
-              </>
-            ) : (
-              <>{search.hitCount} hits (this log records only the count)</>
+    <nav className="space-y-1.5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+      <div className="eyebrow px-1 pb-1">Sessions · {sessions.length}</div>
+      {sessions.map((s) => {
+        const mix = summarizeOutcomes(callOutcomes([s]));
+        return (
+          <a
+            key={s.sessionId}
+            href={href("inspector", { session: s.sessionId })}
+            className={cx(
+              "block rounded-lg border px-3 py-2.5 transition-colors",
+              s.sessionId === activeId
+                ? "border-green/60 bg-forest-300/50"
+                : "border-forest-300/60 bg-forest-600/60 hover:bg-forest-300/30",
             )}
-          </div>
-        ) : (
-          <ol className="space-y-1">
-            {search.hits.map((h, i) => {
-              const call = called.get(h.id);
-              return (
-                <li
-                  key={h.id}
-                  className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-forest-300/20"
-                >
-                  <span className="w-5 text-right font-mono text-xs text-warm-muted">{i + 1}</span>
-                  <ScoreBar ratio={h.score / top} color={color} />
-                  <span className="w-14 font-mono text-[11px] text-warm-muted">
-                    {h.score.toFixed(3)}
-                  </span>
-                  <a
-                    href={href("catalog", { tab: `${search.kind}s`, id: h.id })}
-                    className="min-w-0 flex-1 truncate font-mono text-[13px] text-cream-dim hover:text-cream hover:underline"
-                  >
-                    {h.id}
-                  </a>
-                  {call ? (
-                    <Pill tone={call.error ? "coral" : "green"}>
-                      {call.error ? "called · failed" : "called"}
-                    </Pill>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </div>
+          >
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="truncate font-mono text-xs text-cream" title={s.sessionId}>
+                {s.sessionId.slice(0, 8)}
+              </span>
+              <span className="shrink-0 text-[11px] text-warm-muted">
+                {relativeTime(s.end, now)}
+              </span>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] text-warm-muted">
+              <span>{plural(s.stats.searches, "search", "searches")}</span>
+              {mix.ranked ? (
+                <span className="text-cream-dim" title={TERMS.firstResult.hint}>
+                  {formatPercent(mix.first / mix.ranked)} first right
+                </span>
+              ) : null}
+              {mix.missed ? <span className="text-amber">{mix.missed} missed</span> : null}
+              {s.stats.errors ? <span className="text-coral">{s.stats.errors} failed</span> : null}
+            </div>
+            <div className="mt-2 flex h-1.5 gap-px overflow-hidden rounded-full bg-forest-300/40">
+              {mix.ranked
+                ? MIX_PARTS.map((p) =>
+                    mix[p.key] ? (
+                      <div
+                        key={p.key}
+                        className={p.color}
+                        style={{ width: `${(mix[p.key] / mix.ranked) * 100}%` }}
+                      />
+                    ) : null,
+                  )
+                : null}
+            </div>
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
 
-      {search.invocations.length > 0 ? (
-        <div className="mt-3 border-t border-forest-300/50 pt-3">
-          <div className="eyebrow mb-2 flex items-center gap-1.5">
-            <ArrowRight className="size-3" /> Then the agent called
-          </div>
-          <CallList calls={search.invocations} showRank={search.hits.length > 0} />
+function SearchRow({ search, focused }: { search: SearchRecord; focused: boolean }) {
+  const ref = useRef<HTMLLIElement>(null);
+  const [open, setOpen] = useState(focused);
+  useEffect(() => {
+    if (focused) {
+      setOpen(true);
+      ref.current?.scrollIntoView({ block: "center" });
+    }
+  }, [focused]);
+  const outcome = outcomeOf(search);
+  const relevance = relevanceOf(search.hits);
+  const call = search.invocations[0];
+  const callIndex = call ? search.hits.findIndex((h) => h.id === call.id) : -1;
+  const details = `${search.kind} search · ${search.origin} · top ${search.topK} · ${formatMs(search.tookMs)}`;
+
+  return (
+    <li ref={ref} className={cx(focused && "bg-forest-300/20")}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-forest-300/20"
+      >
+        <ChevronRight
+          className={cx(
+            "size-3.5 shrink-0 text-warm-muted transition-transform",
+            open && "rotate-90",
+          )}
+          aria-hidden
+        />
+        <KindDot kind={search.kind} />
+        <span className="min-w-0 flex-1 truncate text-sm text-cream">
+          {search.query || <em className="text-warm-muted">empty query</em>}
+        </span>
+        <span className="hidden w-52 shrink-0 truncate text-right font-mono text-xs text-cream-dim md:inline">
+          {call?.id ?? ""}
+        </span>
+        <span className="flex w-24 shrink-0 justify-end">
+          <Pill tone={outcome.tone === "muted" ? undefined : outcome.tone}>{outcome.label}</Pill>
+        </span>
+        <span
+          className="w-12 shrink-0 text-right font-mono text-xs text-warm-muted"
+          title={`${TERMS.relevance.label} of the called tool: ${TERMS.relevance.hint}`}
+        >
+          {callIndex >= 0 ? formatPercent(relevance[callIndex] ?? 0) : "–"}
+        </span>
+        <span
+          className="w-16 shrink-0 text-right font-mono text-[11px] text-warm-muted"
+          title={`${new Date(search.ts).toLocaleString()} · ${details}`}
+        >
+          {new Date(search.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
+      </button>
+
+      {open ? (
+        <div className="space-y-3 border-t border-forest-300/40 bg-base-deep/30 px-4 py-3 pl-11">
+          <div className="break-words text-sm text-cream">{search.query}</div>
+          {search.boost?.intent ? (
+            <div className="flex items-center gap-1.5 text-xs text-green">
+              <Sparkles className="size-3.5" /> Learning matched a past pattern (
+              {search.boost.intent}) and promoted {plural(search.boost.promoted, "tool")}.
+            </div>
+          ) : null}
+          {search.hits.length === 0 ? (
+            <p className="text-sm text-warm-muted">
+              {search.hitCount === 0
+                ? "Nothing in the catalog matched this query."
+                : `${search.hitCount} results (this log records only the count).`}
+            </p>
+          ) : (
+            <ol className="space-y-0.5">
+              <li className="flex gap-3 px-2 pb-1 font-mono text-[10px] uppercase tracking-wide text-warm-muted/70">
+                <span className="w-5" />
+                <span className="w-40" title={TERMS.relevance.hint}>
+                  Relevance
+                </span>
+                <span>Result</span>
+              </li>
+              {search.hits.map((h, i) => {
+                const c = search.invocations.find((x) => x.id === h.id);
+                const r = relevance[i] ?? 0;
+                return (
+                  <li
+                    key={h.id}
+                    className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-forest-300/20"
+                  >
+                    <span className="w-5 text-right font-mono text-xs text-warm-muted">
+                      {i + 1}
+                    </span>
+                    <span
+                      className="flex w-40 items-center gap-2"
+                      title={`raw score ${h.score.toFixed(3)}`}
+                    >
+                      <ScoreBar ratio={r} color={KIND_COLOR[search.kind]} />
+                      <span className="w-10 text-right font-mono text-[11px] text-cream-dim">
+                        {formatPercent(r)}
+                      </span>
+                    </span>
+                    <a
+                      href={href("catalog", { tab: `${search.kind}s`, id: h.id })}
+                      className="min-w-0 flex-1 truncate font-mono text-[13px] text-cream-dim hover:text-cream hover:underline"
+                    >
+                      {h.id}
+                    </a>
+                    {c ? (
+                      <Pill tone={c.error ? "coral" : "green"}>
+                        {c.error ? "called · failed" : "called"}
+                      </Pill>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+          {search.invocations.length > 0 ? (
+            <div>
+              <div className="eyebrow mb-1.5">Then the agent called</div>
+              <CallList calls={search.invocations} showRank={search.hits.length > 0} />
+            </div>
+          ) : null}
+          <div className="font-mono text-[11px] text-warm-muted">{details}</div>
         </div>
       ) : null}
-    </article>
+    </li>
   );
 }
 
@@ -423,10 +382,10 @@ function CallList({ calls, showRank = false }: { calls: LinkedInvocation[]; show
           {c.server ? <Pill>{c.server}</Pill> : null}
           {showRank ? (
             c.rank !== null ? (
-              <Pill tone="green">rank {c.rank}</Pill>
+              <Pill tone="green">{c.rank === 1 ? "first result" : `result #${c.rank}`}</Pill>
             ) : (
-              <Pill tone="amber" title="The agent called a capability this search did not return">
-                not retrieved
+              <Pill tone="amber" title={TERMS.missed.hint}>
+                missed by search
               </Pill>
             )
           ) : null}

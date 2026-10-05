@@ -13,6 +13,7 @@ the browser (the UI bundles it) and in tests.
 | `src/catalog-table.ts` | filter / sort / paging for the catalog table, ported from Ratel Cloud's `table-view` |
 | `src/agent-health/` | `buildAgentHealth`: Ratel Cloud's health band (first try, detours, junk, wasted calls) and turn shapes from the trace |
 | `src/health.ts` | `buildHealth`: latency, errors, MCP servers, auth, embedders, dropped events |
+| `src/relevance.ts` | relevance: each hit's share of the top score in its search (the top hit is 100%) |
 | `src/search-outcomes.ts` | the one definition of where a called tool ranked (first / top 3 / lower / missed / unknown) and its rates |
 | `src/savings.ts` | `estimateSavings`: estimated tokens saved vs. sending the full catalog |
 | `src/adaptive.ts` | `buildBoostStats`: match rate and promotions (Overview) |
