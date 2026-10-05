@@ -5,9 +5,21 @@
  * Calls, Retrieved and the definition's token estimate.
  */
 import type { CatalogEntry } from "./catalog.js";
+import { LOW_RANK_AFTER, MIN_PATTERN } from "./improvements.js";
 import { estimateTokens } from "./savings.js";
+import type { CapabilityOutcomes } from "./search-outcomes.js";
 
-export type CatalogSortKey = "name" | "calls" | "retrieved" | "tokens" | "lastSeen";
+export type CatalogSortKey =
+  | "name"
+  | "calls"
+  | "firstResult"
+  | "missed"
+  | "retrieved"
+  | "tokens"
+  | "lastSeen";
+
+/** Per-tool search outcomes, keyed `kind:id` (`outcomesByCapability`). */
+export type OutcomesByCapability = ReadonlyMap<string, CapabilityOutcomes>;
 export type SortDirection = "asc" | "desc";
 
 /** `defined`: the SDK recorded its definition. `observed`: only its id was seen. */
@@ -17,6 +29,8 @@ export type ProvenanceFilter = CatalogProvenance | "all";
 export interface CatalogView {
   query: string;
   provenance: ProvenanceFilter;
+  /** Only tools that need attention (`needsAttention`). */
+  attention: boolean;
   sort: CatalogSortKey;
   direction: SortDirection;
   page: number;
@@ -28,7 +42,37 @@ export const CATALOG_PAGE_SIZES = [25, 50, 100] as const;
 export const DEFAULT_CATALOG_PAGE_SIZE = 25;
 const DEFAULT_SORT: CatalogSortKey = "calls";
 const DEFAULT_DIRECTION: SortDirection = "desc";
-const SORT_KEYS: readonly CatalogSortKey[] = ["name", "calls", "retrieved", "tokens", "lastSeen"];
+const SORT_KEYS: readonly CatalogSortKey[] = [
+  "name",
+  "calls",
+  "firstResult",
+  "missed",
+  "retrieved",
+  "tokens",
+  "lastSeen",
+];
+
+/**
+ * A tool needs attention when search keeps missing it, usually ranks it low, or
+ * it keeps failing: the same thresholds as the Summary's "Fix these".
+ */
+export function needsAttention(o: CapabilityOutcomes | undefined): boolean {
+  if (!o) return false;
+  const low = o.ranks.filter((r) => r > LOW_RANK_AFTER).length;
+  return (
+    o.missed >= MIN_PATTERN ||
+    (low >= MIN_PATTERN && low * 2 >= o.ranks.length) ||
+    o.failed >= MIN_PATTERN
+  );
+}
+
+const healthOf = (health: OutcomesByCapability | undefined, e: CatalogEntry) =>
+  health?.get(`${e.kind}:${e.id}`);
+
+/** First-result rate, or -1 when nothing was ranked, so unknowns sort last. */
+function firstRate(o: CapabilityOutcomes | undefined): number {
+  return o && o.ranked > 0 ? o.first / o.ranked : -1;
+}
 export const CATALOG_PROVENANCE_ORDER: readonly CatalogProvenance[] = ["defined", "observed"];
 
 export const CATALOG_PROVENANCE: Record<CatalogProvenance, { label: string; hint: string }> = {
@@ -72,6 +116,7 @@ export function resolveCatalogView(
   return {
     query: params.q ?? "",
     provenance: provenance === "defined" || provenance === "observed" ? provenance : "all",
+    attention: params.attention === "1",
     sort: SORT_KEYS.includes(params.sort as CatalogSortKey)
       ? (params.sort as CatalogSortKey)
       : DEFAULT_SORT,
@@ -87,6 +132,7 @@ export function catalogTableParams(view: CatalogView): Record<string, string> {
   const out: Record<string, string> = {};
   if (view.query.trim() !== "") out.q = view.query;
   if (view.provenance !== "all") out.provenance = view.provenance;
+  if (view.attention) out.attention = "1";
   if (view.sort !== DEFAULT_SORT) out.sort = view.sort;
   if (view.direction !== DEFAULT_DIRECTION) out.dir = view.direction;
   if (view.page > 1) out.page = String(view.page);
@@ -94,14 +140,16 @@ export function catalogTableParams(view: CatalogView): Record<string, string> {
   return out;
 }
 
-/** Name-and-description substring match plus the provenance facet. */
+/** Name-and-description substring match, the provenance facet and the attention filter. */
 export function filterCatalogRows(
   rows: readonly CatalogEntry[],
-  view: Pick<CatalogView, "query" | "provenance">,
+  view: Pick<CatalogView, "query" | "provenance"> & { attention?: boolean },
+  health?: OutcomesByCapability,
 ): CatalogEntry[] {
   const needle = view.query.trim().toLowerCase();
   return rows.filter((row) => {
     if (view.provenance !== "all" && provenanceOf(row) !== view.provenance) return false;
+    if (view.attention && !needsAttention(healthOf(health, row))) return false;
     if (needle === "") return true;
     return (
       row.name.toLowerCase().includes(needle) || row.description.toLowerCase().includes(needle)
@@ -114,21 +162,31 @@ export function sortCatalogRows(
   rows: readonly CatalogEntry[],
   sort: CatalogSortKey,
   direction: SortDirection,
+  health?: OutcomesByCapability,
 ): CatalogEntry[] {
   const sign = direction === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
-    const primary = compareBy(a, b, sort);
+    const primary = compareBy(a, b, sort, health);
     if (primary !== 0) return primary * sign;
     if (sort === "calls") {
-      const retrieved = compareBy(a, b, "retrieved");
+      const retrieved = compareBy(a, b, "retrieved", health);
       if (retrieved !== 0) return retrieved * sign;
     }
     return a.name.localeCompare(b.name);
   });
 }
 
-function compareBy(a: CatalogEntry, b: CatalogEntry, sort: CatalogSortKey): number {
+function compareBy(
+  a: CatalogEntry,
+  b: CatalogEntry,
+  sort: CatalogSortKey,
+  health: OutcomesByCapability | undefined,
+): number {
   switch (sort) {
+    case "firstResult":
+      return firstRate(healthOf(health, a)) - firstRate(healthOf(health, b));
+    case "missed":
+      return (healthOf(health, a)?.missed ?? 0) - (healthOf(health, b)?.missed ?? 0);
     case "name":
       return a.name.localeCompare(b.name);
     case "calls":

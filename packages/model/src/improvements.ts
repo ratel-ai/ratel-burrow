@@ -53,9 +53,9 @@ export type Improvement =
   /** Registered, but no search returned them: dead weight, or text nobody's queries match. */
   | { kind: "never_retrieved"; capability: Capability; ids: string[]; searches: number };
 
-const MIN_PATTERN = 2;
+export const MIN_PATTERN = 2;
 /** Ranks deeper than this count as "low". */
-const LOW_RANK_AFTER = 3;
+export const LOW_RANK_AFTER = 3;
 const MAX_EXAMPLES = 3;
 const ORDER: Improvement["kind"][] = [
   "missed",

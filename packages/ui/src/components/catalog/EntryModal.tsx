@@ -1,8 +1,11 @@
 import {
+  type CallOutcome,
+  type CapabilityOutcomes,
   type CatalogEntry,
   definitionTokens,
   formatCount,
   formatMs,
+  formatPercent,
   relativeTime,
 } from "@ratel-ai/burrow-model";
 import { Bot, ChevronRight, Search, X } from "lucide-react";
@@ -57,7 +60,18 @@ export function Modal({
 }
 
 /** One catalog entry, as Cloud's tool modal shows it, plus the trace's usage. */
-export function EntryModal({ entry, onClose }: { entry: CatalogEntry; onClose: () => void }) {
+export function EntryModal({
+  entry,
+  outcomes,
+  missedExamples = [],
+  onClose,
+}: {
+  entry: CatalogEntry;
+  outcomes?: CapabilityOutcomes;
+  /** A few searches that missed this entry, linked to the Searches page. */
+  missedExamples?: readonly CallOutcome[];
+  onClose: () => void;
+}) {
   const tokens = definitionTokens(entry);
   const now = Date.now();
   return (
@@ -90,12 +104,42 @@ export function EntryModal({ entry, onClose }: { entry: CatalogEntry; onClose: (
         <Datum label={entry.kind === "fact" ? "Injected" : "Calls"}>
           {formatCount(entry.stats.invoked)}
         </Datum>
-        <Datum label="Retrieved">{formatCount(entry.stats.retrieved)}</Datum>
+        <Datum label="First result right">
+          {outcomes && outcomes.ranked > 0 ? formatPercent(outcomes.first / outcomes.ranked) : "–"}
+        </Datum>
+        <Datum label="Missed by search">{formatCount(outcomes?.missed ?? 0)}</Datum>
         <Datum label="Failed">{formatCount(entry.stats.errors)}</Datum>
-        <Datum label="Avg latency">{formatMs(entry.stats.avgLatencyMs)}</Datum>
+        <Datum label="Retrieved">{formatCount(entry.stats.retrieved)}</Datum>
         <Datum label="Tokens">{tokens === null ? "–" : `~${formatCount(tokens)}`}</Datum>
-        <Datum label="Last seen">{relativeTime(entry.lastSeen, now)}</Datum>
       </dl>
+      <p className="-mt-2 font-mono text-[11px] text-warm-muted">
+        typical time {formatMs(entry.stats.avgLatencyMs)} · last seen{" "}
+        {relativeTime(entry.lastSeen, now)}
+      </p>
+
+      {missedExamples.length ? (
+        <div className="rounded-lg border border-amber/30 bg-amber/5 p-3 text-xs">
+          <div className="font-mono text-[10px] uppercase tracking-wide text-amber">
+            Searches that missed it
+          </div>
+          <p className="mt-1 text-warm-muted">
+            The agent asked like this and Ratel didn't return it. Add these words to its searchable
+            description.
+          </p>
+          <ul className="mt-2 space-y-1">
+            {missedExamples.map((m) => (
+              <li key={m.searchKey}>
+                <a
+                  href={href("inspector", { session: m.sessionId, search: m.searchKey })}
+                  className="block truncate text-cream-dim hover:text-cream hover:underline"
+                >
+                  “{m.query}”
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {entry.defined ? (
         <div className="space-y-3 text-xs text-warm-muted">

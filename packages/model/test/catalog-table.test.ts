@@ -5,12 +5,14 @@ import {
   catalogTableParams,
   definitionTokens,
   filterCatalogRows,
+  needsAttention,
   nextSortDirection,
   presentProvenances,
   provenanceOf,
   resolveCatalogView,
   sortCatalogRows,
 } from "../src/catalog-table";
+import type { CapabilityOutcomes } from "../src/search-outcomes";
 
 function entry(id: string, patch: Partial<CatalogEntry> = {}): CatalogEntry {
   return {
@@ -45,6 +47,7 @@ describe("resolveCatalogView", () => {
     expect(resolveCatalogView({})).toEqual({
       query: "",
       provenance: "all",
+      attention: false,
       sort: "calls",
       direction: "desc",
       page: 1,
@@ -144,5 +147,57 @@ describe("helpers", () => {
   it("lists only the provenances present", () => {
     expect(provenanceOf(entry("a", { defined: false }))).toBe("observed");
     expect(presentProvenances([entry("a")])).toEqual(["defined"]);
+  });
+});
+
+const health = (patch: Partial<CapabilityOutcomes>): CapabilityOutcomes => ({
+  calls: 0,
+  ranked: 0,
+  first: 0,
+  top3: 0,
+  lower: 0,
+  missed: 0,
+  failed: 0,
+  ranks: [],
+  ...patch,
+});
+
+describe("per-tool health", () => {
+  const rows = [entry("good"), entry("missed"), entry("low"), entry("failing")];
+  const byTool = new Map([
+    ["tool:good", health({ calls: 4, ranked: 4, first: 4, ranks: [1, 1, 1, 1] })],
+    ["tool:missed", health({ calls: 3, ranked: 3, first: 1, missed: 2, ranks: [1] })],
+    ["tool:low", health({ calls: 2, ranked: 2, lower: 2, ranks: [5, 6] })],
+    ["tool:failing", health({ calls: 2, ranked: 2, first: 2, failed: 2, ranks: [1, 1] })],
+  ]);
+
+  it("flags tools search keeps missing, ranks low, or that keep failing", () => {
+    expect(rows.filter((r) => needsAttention(byTool.get(`tool:${r.id}`))).map((r) => r.id)).toEqual(
+      ["missed", "low", "failing"],
+    );
+    expect(needsAttention(undefined)).toBe(false);
+  });
+
+  it("filters to tools needing attention", () => {
+    const view = { ...resolveCatalogView({ attention: "1" }) };
+    expect(view.attention).toBe(true);
+    expect(filterCatalogRows(rows, view, byTool).map((r) => r.id)).toEqual([
+      "missed",
+      "low",
+      "failing",
+    ]);
+  });
+
+  it("sorts by first-result rate and by misses", () => {
+    expect(sortCatalogRows(rows, "missed", "desc", byTool).map((r) => r.id)[0]).toBe("missed");
+    expect(
+      sortCatalogRows(rows, "firstResult", "desc", byTool)
+        .map((r) => r.id)
+        .slice(0, 2),
+    ).toEqual(["failing", "good"]);
+  });
+
+  it("round-trips the attention filter through the URL", () => {
+    expect(catalogTableParams(resolveCatalogView({ attention: "1" }))).toEqual({ attention: "1" });
   });
 });

@@ -2,6 +2,7 @@ import {
   CATALOG_PAGE_SIZES,
   CATALOG_PROVENANCE,
   CATALOG_PROVENANCE_ORDER,
+  type CapabilityOutcomes,
   type CatalogEntry,
   type CatalogSortKey,
   type CatalogView,
@@ -9,7 +10,10 @@ import {
   definitionTokens,
   filterCatalogRows,
   formatCount,
+  formatPercent,
+  needsAttention,
   nextSortDirection,
+  type OutcomesByCapability,
   presentProvenances,
   provenanceOf,
   sortCatalogRows,
@@ -34,6 +38,18 @@ const FILTER_DEBOUNCE_MS = 200;
 const COLUMNS: { key: CatalogSortKey; label: string; right?: boolean; title?: string }[] = [
   { key: "name", label: "Name" },
   { key: "calls", label: "Calls", right: true },
+  {
+    key: "firstResult",
+    label: "First result",
+    right: true,
+    title: "Calls where this was Ratel's first result",
+  },
+  {
+    key: "missed",
+    label: "Missed",
+    right: true,
+    title: "Calls after a search that did not return it",
+  },
   { key: "retrieved", label: "Retrieved", right: true, title: "Searches that listed it" },
   {
     key: "tokens",
@@ -50,6 +66,7 @@ export function CatalogTable({
   callsLabel,
   entries,
   view,
+  health,
   onChange,
   onOpen,
 }: {
@@ -57,13 +74,27 @@ export function CatalogTable({
   callsLabel: string;
   entries: readonly CatalogEntry[];
   view: CatalogView;
+  /** Per-tool search outcomes, keyed `kind:id`. */
+  health: OutcomesByCapability;
   onChange: (patch: Partial<CatalogView>, replace?: boolean) => void;
   onOpen: (entry: CatalogEntry) => void;
 }) {
   const filtered = useMemo(
-    () => sortCatalogRows(filterCatalogRows(entries, view), view.sort, view.direction),
-    [entries, view],
+    () =>
+      sortCatalogRows(filterCatalogRows(entries, view, health), view.sort, view.direction, health),
+    [entries, view, health],
   );
+  const attentionCount = useMemo(
+    () => entries.filter((e) => needsAttention(health.get(`${e.kind}:${e.id}`))).length,
+    [entries, health],
+  );
+  // A column that says the same thing on every row is noise; the modal still has it.
+  const showLastSeen = useMemo(
+    () =>
+      new Set(entries.map((e) => (e.lastSeen ? new Date(e.lastSeen).toDateString() : ""))).size > 1,
+    [entries],
+  );
+  const columns = COLUMNS.filter((c) => c.key !== "lastSeen" || showLastSeen);
   const pageCount = Math.max(1, Math.ceil(filtered.length / view.pageSize));
   const page = Math.min(view.page, pageCount);
   const offset = (page - 1) * view.pageSize;
@@ -74,7 +105,13 @@ export function CatalogTable({
   return (
     <div className="rounded-xl border border-forest-300/60 bg-forest-600/70 p-5">
       <div className="flex flex-wrap items-center gap-2.5">
-        <Toolbar noun={noun} view={view} available={available} onChange={onChange} />
+        <Toolbar
+          noun={noun}
+          view={view}
+          available={available}
+          attentionCount={attentionCount}
+          onChange={onChange}
+        />
         <span className="ml-auto text-xs text-warm-muted">
           {filtered.length} of {entries.length} {entries.length === 1 ? noun : `${noun}s`}
         </span>
@@ -87,7 +124,7 @@ export function CatalogTable({
             <p className="mt-3 text-sm text-cream-dim">No {noun}s match this filter</p>
             <button
               type="button"
-              onClick={() => onChange({ query: "", provenance: "all", page: 1 })}
+              onClick={() => onChange({ query: "", provenance: "all", attention: false, page: 1 })}
               className="mt-2 text-xs font-medium text-warm-muted underline decoration-dotted underline-offset-2 hover:text-cream"
             >
               Clear filters
@@ -98,7 +135,7 @@ export function CatalogTable({
             <table className="w-full min-w-[720px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-forest-300 bg-base-deep/35 font-mono text-[9px] uppercase tracking-[0.11em] text-warm-muted">
-                  {COLUMNS.map((column) => {
+                  {columns.map((column) => {
                     const active = view.sort === column.key;
                     const Icon = !active
                       ? ChevronsUpDown
@@ -150,7 +187,14 @@ export function CatalogTable({
               </thead>
               <tbody>
                 {visible.map((entry) => (
-                  <Row key={entry.id} entry={entry} now={now} onOpen={onOpen} />
+                  <Row
+                    key={entry.id}
+                    entry={entry}
+                    outcomes={health.get(`${entry.kind}:${entry.id}`)}
+                    showLastSeen={showLastSeen}
+                    now={now}
+                    onOpen={onOpen}
+                  />
                 ))}
               </tbody>
             </table>
@@ -172,10 +216,14 @@ export function CatalogTable({
 
 function Row({
   entry,
+  outcomes,
+  showLastSeen,
   now,
   onOpen,
 }: {
   entry: CatalogEntry;
+  outcomes: CapabilityOutcomes | undefined;
+  showLastSeen: boolean;
   now: number;
   onOpen: (entry: CatalogEntry) => void;
 }) {
@@ -216,21 +264,33 @@ function Row({
         </div>
       </th>
       <Metric>{formatCount(entry.stats.invoked)}</Metric>
+      <Metric>
+        {outcomes && outcomes.ranked > 0 ? formatPercent(outcomes.first / outcomes.ranked) : "–"}
+      </Metric>
+      <Metric>
+        {outcomes?.missed ? (
+          <span className="text-amber">{formatCount(outcomes.missed)}</span>
+        ) : (
+          <span className="text-warm-muted">0</span>
+        )}
+      </Metric>
       <Metric>{formatCount(entry.stats.retrieved)}</Metric>
       <Metric>{tokens === null ? "–" : `~${formatCount(tokens)}`}</Metric>
-      <td className="px-4 py-3 text-right">
-        {entry.lastSeen ? (
-          <span
-            className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap font-mono text-[11px] text-cream-dim"
-            title={new Date(entry.lastSeen).toLocaleString()}
-          >
-            <Clock3 className="size-3 text-warm-muted" aria-hidden />
-            {formatLastSeen(entry.lastSeen, now)}
-          </span>
-        ) : (
-          <span className="font-mono text-[11px] text-warm-muted">Never</span>
-        )}
-      </td>
+      {showLastSeen ? (
+        <td className="px-4 py-3 text-right">
+          {entry.lastSeen ? (
+            <span
+              className="inline-flex items-center justify-end gap-1.5 whitespace-nowrap font-mono text-[11px] text-cream-dim"
+              title={new Date(entry.lastSeen).toLocaleString()}
+            >
+              <Clock3 className="size-3 text-warm-muted" aria-hidden />
+              {formatLastSeen(entry.lastSeen, now)}
+            </span>
+          ) : (
+            <span className="font-mono text-[11px] text-warm-muted">Never</span>
+          )}
+        </td>
+      ) : null}
       <td className="w-8 pr-4 text-right">
         <ChevronRight
           className="inline size-3.5 text-warm-muted/50"
@@ -290,11 +350,13 @@ function Toolbar({
   noun,
   view,
   available,
+  attentionCount,
   onChange,
 }: {
   noun: string;
   view: CatalogView;
   available: readonly string[];
+  attentionCount: number;
   onChange: (patch: Partial<CatalogView>, replace?: boolean) => void;
 }) {
   const [draft, setDraft] = useState(view.query);
@@ -349,23 +411,41 @@ function Toolbar({
           </button>
         ) : null}
       </div>
-      <select
-        aria-label="Filter by source"
-        value={view.provenance}
-        onChange={(e) =>
-          onChange({ provenance: e.target.value as CatalogView["provenance"], page: 1 })
-        }
-        className="h-8 w-40 shrink-0 rounded-lg border border-forest-300 bg-base-deep/70 px-2.5 text-xs text-cream-dim focus:border-coral focus:outline-none"
-      >
-        <option value="all">All sources</option>
-        {CATALOG_PROVENANCE_ORDER.filter((p) => available.includes(p) || view.provenance === p).map(
-          (p) => (
+      {attentionCount > 0 || view.attention ? (
+        <button
+          type="button"
+          aria-pressed={view.attention}
+          onClick={() => onChange({ attention: !view.attention, page: 1 })}
+          title="Tools search keeps missing, usually ranks low, or that keep failing"
+          className={cx(
+            "h-8 shrink-0 rounded-lg border px-3 text-xs transition-colors",
+            view.attention
+              ? "border-amber/60 bg-amber/15 text-amber"
+              : "border-forest-300 bg-base-deep/70 text-cream-dim hover:text-cream",
+          )}
+        >
+          Needs attention · {attentionCount}
+        </button>
+      ) : null}
+      {available.length > 1 || view.provenance !== "all" ? (
+        <select
+          aria-label="Filter by source"
+          value={view.provenance}
+          onChange={(e) =>
+            onChange({ provenance: e.target.value as CatalogView["provenance"], page: 1 })
+          }
+          className="h-8 w-40 shrink-0 rounded-lg border border-forest-300 bg-base-deep/70 px-2.5 text-xs text-cream-dim focus:border-coral focus:outline-none"
+        >
+          <option value="all">All sources</option>
+          {CATALOG_PROVENANCE_ORDER.filter(
+            (p) => available.includes(p) || view.provenance === p,
+          ).map((p) => (
             <option key={p} value={p} title={CATALOG_PROVENANCE[p].hint}>
               {CATALOG_PROVENANCE[p].label}
             </option>
-          ),
-        )}
-      </select>
+          ))}
+        </select>
+      ) : null}
     </div>
   );
 }

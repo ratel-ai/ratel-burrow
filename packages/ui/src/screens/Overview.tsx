@@ -5,6 +5,7 @@ import {
   formatCount,
   formatPercent,
   inResultsRate,
+  needsAttention,
   outcomesByCapability,
   plural,
   summarizeOutcomes,
@@ -35,11 +36,8 @@ export function OverviewScreen() {
   const first = firstResultRate(outcomes);
   const inResults = inResultsRate(outcomes);
   const prev = previous?.outcomes ?? null;
-  const attention = new Set(
-    improvements.flatMap((i) =>
-      i.kind === "missed" || i.kind === "buried" || i.kind === "failing" ? [i.id] : [],
-    ),
-  ).size;
+  // Same rule as the Tools page's "Needs attention" filter, so the counts match.
+  const attention = [...byTool.values()].filter(needsAttention).length;
 
   if (status === "ready" && sources.length === 0) return <SetupGuide />;
 
