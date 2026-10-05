@@ -27,6 +27,11 @@ without a scale.
   - **Missed by search** = missed
 
   `ranked` is calls whose rank is knowable. Labels and hints live in `packages/ui/src/lib/terms.ts`.
+- **Only served searches count.** A search's `origin` is `agent` (the model searched), `direct`
+  (your code searched) or `baseline` (Ratel was only observing; the agent chose from its own full
+  tool list). Rates, misses, problems and "What to improve" count `agent` and `direct` only
+  (`servedOnly`), because a miss after a `baseline` search is not Ratel's. Observed searches are
+  labelled and compared separately ("When only watching" on the Summary).
 - **Needs attention** (`needsAttention` in `catalog-table.ts`) uses the same thresholds as the
   Summary's "What to improve" (`MIN_PATTERN`, `LOW_RANK_AFTER` in `improvements.ts`): missed ≥ 2,
   mostly ranked below the top 3, or failed ≥ 2, so the Summary's verdict and its list agree.

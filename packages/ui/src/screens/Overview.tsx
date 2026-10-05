@@ -8,6 +8,7 @@ import {
   needsAttention,
   outcomesByCapability,
   plural,
+  servedOnly,
   summarizeOutcomes,
 } from "@ratel-ai/burrow-model";
 import { AlertTriangle } from "lucide-react";
@@ -21,12 +22,18 @@ import { TokensSaved } from "../components/summary/TokensSaved";
 import { pointDelta, relativeDelta, TrendChip } from "../components/summary/Trend";
 import { Code, Empty } from "../components/ui";
 import { useBurrow } from "../lib/data";
-import { TERMS } from "../lib/terms";
+import { ORIGINS, TERMS } from "../lib/terms";
 
 /** Summary: is Ratel working for this agent, and what should be fixed first? */
 export function OverviewScreen() {
   const { sources, catalog, sessions, savings, health, previous, status, project } = useBurrow();
-  const outcomeList = useMemo(() => callOutcomes(sessions), [sessions]);
+  const allOutcomes = useMemo(() => callOutcomes(sessions), [sessions]);
+  // Rates count only searches Ratel served; observed ones are compared separately below.
+  const outcomeList = useMemo(() => servedOnly(allOutcomes), [allOutcomes]);
+  const observed = useMemo(
+    () => summarizeOutcomes(allOutcomes.filter((o) => o.origin === "baseline")),
+    [allOutcomes],
+  );
   const outcomes = useMemo(() => summarizeOutcomes(outcomeList), [outcomeList]);
   const byTool = useMemo(() => outcomesByCapability(outcomeList), [outcomeList]);
   const improvements = useMemo(() => buildImprovements({ catalog, sessions }), [catalog, sessions]);
@@ -118,6 +125,19 @@ export function OverviewScreen() {
           trend={<Count now={outcomes.failed} before={prev?.failed ?? null} upIsGood={false} />}
         />
       </div>
+
+      {observed.ranked > 0 ? (
+        <p
+          className="rounded-xl border border-forest-300/60 bg-forest-600/40 px-4 py-2.5 text-sm text-cream-dim"
+          title={ORIGINS.baseline.hint}
+        >
+          <span className="eyebrow mr-2">When only watching</span>
+          on {formatCount(observed.ranked)} observed calls, the agent's pick was Ratel's first
+          result {formatPercent(observed.first / observed.ranked)} of the time and in its results{" "}
+          {formatPercent((observed.ranked - observed.missed) / observed.ranked)}. These are not in
+          the numbers above.
+        </p>
+      ) : null}
 
       <Improvements items={improvements} searches={savings.searches} />
 

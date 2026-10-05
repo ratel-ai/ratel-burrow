@@ -25,3 +25,19 @@ export const TERMS = {
     hint: "Groups of similar requests, each remembered with the tools that answered it.",
   },
 } as const;
+
+/** Where a search came from (the trace's `origin`), in plain words. */
+export const ORIGINS = {
+  agent: {
+    label: "Agent",
+    hint: "The model wrote this query and called Ratel's search tool.",
+  },
+  direct: {
+    label: "Your code",
+    hint: "Your code called search() directly with this query.",
+  },
+  baseline: {
+    label: "Observed",
+    hint: "Ratel was only watching: the agent picked from its full tool list, not Ratel's results. Not counted in Ratel's rates.",
+  },
+} as const;

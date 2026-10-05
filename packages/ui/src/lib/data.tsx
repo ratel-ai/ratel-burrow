@@ -25,6 +25,7 @@ import {
   type SavingsEstimate,
   type SessionTimeline,
   scopeToProject,
+  servedOnly,
   summarizeOutcomes,
   type TimeRange,
   type TimeWindow,
@@ -321,7 +322,7 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
     const previous =
       prevEvents.length > 0
         ? {
-            outcomes: summarizeOutcomes(callOutcomes(buildInspector(prevEvents))),
+            outcomes: summarizeOutcomes(servedOnly(callOutcomes(buildInspector(prevEvents)))),
             savedTotal: estimateSavings(prevEvents, catalog).savedTotal,
           }
         : null;

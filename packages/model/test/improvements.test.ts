@@ -76,6 +76,15 @@ describe("buildImprovements", () => {
     expect(buildImprovements({ catalog: catalog([]), sessions })).toEqual([]);
   });
 
+  it("ignores searches Ratel only observed", () => {
+    const watched = (q: string) => ({
+      ...search(q, ["a"], [call("x", null)]),
+      origin: "baseline" as const,
+    });
+    const sessions = [session([watched("a"), watched("b"), watched("c")])];
+    expect(buildImprovements({ catalog: catalog([]), sessions })).toEqual([]);
+  });
+
   it("needs a pattern, not one miss", () => {
     const sessions = [session([search("q", ["a"], [call("x", null)])])];
     expect(buildImprovements({ catalog: catalog([]), sessions })).toEqual([]);

@@ -4,7 +4,7 @@ import type { Catalog } from "./catalog.js";
 import type { SessionTimeline } from "./inspector.js";
 import type { IntentGraphDocument } from "./intent-graph/wire.js";
 import type { SavingsEstimate } from "./savings.js";
-import { callOutcomes, summarizeOutcomes } from "./search-outcomes.js";
+import { callOutcomes, servedOnly, summarizeOutcomes } from "./search-outcomes.js";
 
 /**
  * How Ratel works, in one project's numbers: the five steps the Overview walks
@@ -54,7 +54,7 @@ export function buildRatelFlow(input: {
   const { catalog, sessions, savings, boost, boostStats, graph } = input;
   const live = (list: Catalog["tools"]) => list.filter((e) => !e.removed).length;
 
-  const outcomes = summarizeOutcomes(callOutcomes(sessions));
+  const outcomes = summarizeOutcomes(servedOnly(callOutcomes(sessions)));
   const call = {
     calls: outcomes.calls,
     ranked: outcomes.ranked,

@@ -3,11 +3,13 @@ import {
   formatMs,
   formatPercent,
   type LinkedInvocation,
+  type Origin,
   plural,
   relativeTime,
   relevanceOf,
   type SearchRecord,
   type SessionTimeline,
+  servedOnly,
   summarizeOutcomes,
 } from "@ratel-ai/burrow-model";
 import { ChevronRight, CircleCheck, CircleX, Sparkles } from "lucide-react";
@@ -16,11 +18,12 @@ import { ScoreBar } from "../components/charts";
 import { Card, cx, Empty, KindDot, PageHeader, Pill, SearchInput, Tabs } from "../components/ui";
 import { useBurrow } from "../lib/data";
 import { href, useRoute } from "../lib/route";
-import { TERMS } from "../lib/terms";
+import { ORIGINS, TERMS } from "../lib/terms";
 
 type Filter = "problems" | "called" | "all";
 const FILTERS: Filter[] = ["problems", "called", "all"];
 const PAGE = 100;
+const ORIGIN_ORDER: Origin[] = ["agent", "direct", "baseline"];
 
 const KIND_COLOR = {
   tool: "var(--color-cap-tool)",
@@ -29,6 +32,8 @@ const KIND_COLOR = {
 };
 
 function hasProblem(s: SearchRecord): boolean {
+  // Observed searches never reached the agent, so what follows them isn't Ratel's problem.
+  if (s.origin === "baseline") return false;
   return (
     s.hitCount === 0 ||
     s.invocations.some((c) => c.error !== null || (c.rank === null && s.hits.length > 0))
@@ -62,6 +67,7 @@ export function InspectorScreen() {
     return FILTERS.includes(f as Filter) ? (f as Filter) : null;
   });
   const [shown, setShown] = useState(PAGE);
+  const [origin, setOrigin] = useState<Origin | null>(null);
 
   const session = sessions.find((s) => s.sessionId === sessionId) ?? null;
   const base = useMemo(() => {
@@ -73,6 +79,12 @@ export function InspectorScreen() {
     }
     return session ? [...session.searches].sort((a, b) => b.ts - a.ts) : [];
   }, [sessions, session, toolFilter]);
+
+  const origins = useMemo(() => {
+    const by = new Map<Origin, number>();
+    for (const s of base) by.set(s.origin, (by.get(s.origin) ?? 0) + 1);
+    return ORIGIN_ORDER.filter((o) => by.has(o)).map((o) => ({ origin: o, count: by.get(o) ?? 0 }));
+  }, [base]);
 
   const counts = useMemo(
     () => ({
@@ -89,6 +101,7 @@ export function InspectorScreen() {
   const searches = useMemo(() => {
     const q = query.trim().toLowerCase();
     return base.filter((s) => {
+      if (origin && s.origin !== origin) return false;
       if (filter === "called" && s.invocations.length === 0) return false;
       if (filter === "problems" && !hasProblem(s)) return false;
       if (!q) return true;
@@ -98,7 +111,7 @@ export function InspectorScreen() {
         s.invocations.some((c) => c.id.toLowerCase().includes(q))
       );
     });
-  }, [base, query, filter]);
+  }, [base, query, filter, origin]);
 
   return (
     <div>
@@ -128,6 +141,30 @@ export function InspectorScreen() {
                 onChange={setQuery}
                 placeholder="Filter by query or tool…"
               />
+              {origins.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {origins.map(({ origin: o, count }) => (
+                    <button
+                      key={o}
+                      type="button"
+                      aria-pressed={origin === o}
+                      title={ORIGINS[o].hint}
+                      onClick={() => {
+                        setOrigin((cur) => (cur === o ? null : o));
+                        setShown(PAGE);
+                      }}
+                      className={cx(
+                        "h-8 rounded-lg border px-2.5 text-xs transition-colors",
+                        origin === o
+                          ? "border-green/60 bg-green/10 text-cream"
+                          : "border-forest-300 bg-base-deep/60 text-cream-dim hover:text-cream",
+                      )}
+                    >
+                      {ORIGINS[o].label} · {count}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
             {toolFilter ? (
               <div className="flex items-center gap-2 text-sm">
@@ -188,7 +225,7 @@ function SessionList({
     <nav className="space-y-1.5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
       <div className="eyebrow px-1 pb-1">Sessions · {sessions.length}</div>
       {sessions.map((s) => {
-        const mix = summarizeOutcomes(callOutcomes([s]));
+        const mix = summarizeOutcomes(servedOnly(callOutcomes([s])));
         return (
           <a
             key={s.sessionId}
@@ -248,10 +285,12 @@ function SearchRow({ search, focused }: { search: SearchRecord; focused: boolean
     }
   }, [focused]);
   const outcome = outcomeOf(search);
+  // An observed search's outcome is shown, but muted: Ratel's results never reached the agent.
+  const tone = search.origin === "baseline" ? "muted" : outcome.tone;
   const relevance = relevanceOf(search.hits);
   const call = search.invocations[0];
   const callIndex = call ? search.hits.findIndex((h) => h.id === call.id) : -1;
-  const details = `${search.kind} search · ${search.origin} · top ${search.topK} · ${formatMs(search.tookMs)}`;
+  const details = `${search.kind} search · ${ORIGINS[search.origin].label.toLowerCase()} · top ${search.topK} · ${formatMs(search.tookMs)}`;
 
   return (
     <li ref={ref} className={cx(focused && "bg-forest-300/20")}>
@@ -272,11 +311,20 @@ function SearchRow({ search, focused }: { search: SearchRecord; focused: boolean
         <span className="min-w-0 flex-1 truncate text-sm text-cream">
           {search.query || <em className="text-warm-muted">empty query</em>}
         </span>
-        <span className="hidden w-52 shrink-0 truncate text-right font-mono text-xs text-cream-dim md:inline">
+        <span className="hidden w-44 shrink-0 truncate text-right font-mono text-xs text-cream-dim md:inline">
           {call?.id ?? ""}
         </span>
+        <span
+          className={cx(
+            "hidden w-16 shrink-0 text-right font-mono text-[11px] lg:inline",
+            search.origin === "baseline" ? "text-amber" : "text-warm-muted",
+          )}
+          title={ORIGINS[search.origin].hint}
+        >
+          {ORIGINS[search.origin].label}
+        </span>
         <span className="flex w-24 shrink-0 justify-end">
-          <Pill tone={outcome.tone === "muted" ? undefined : outcome.tone}>{outcome.label}</Pill>
+          <Pill tone={tone === "muted" ? undefined : tone}>{outcome.label}</Pill>
         </span>
         <span
           className="w-12 shrink-0 text-right font-mono text-xs text-warm-muted"

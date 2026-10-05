@@ -5,6 +5,7 @@ import {
   firstResultRate,
   inResultsRate,
   outcomesByCapability,
+  servedOnly,
   summarizeOutcomes,
 } from "../src/search-outcomes";
 
@@ -113,5 +114,26 @@ describe("callOutcomes", () => {
       failed: 0,
       ranks: [1, 4],
     });
+  });
+});
+
+describe("origin", () => {
+  const sessions = [
+    session([
+      search(["a"], [call("a", 1)], { origin: "agent" }),
+      search(["a"], [call("b", null)], { origin: "direct" }),
+      // Observed only: the agent chose from its own list, so this miss is not Ratel's.
+      search(["a"], [call("c", null)], { origin: "baseline" }),
+    ]),
+  ];
+
+  it("carries where each search came from", () => {
+    expect(callOutcomes(sessions).map((o) => o.origin)).toEqual(["agent", "direct", "baseline"]);
+  });
+
+  it("keeps only searches Ratel served for the rates", () => {
+    const served = servedOnly(callOutcomes(sessions));
+    expect(served.map((o) => o.id)).toEqual(["a", "b"]);
+    expect(summarizeOutcomes(served)).toMatchObject({ ranked: 2, first: 1, missed: 1 });
   });
 });

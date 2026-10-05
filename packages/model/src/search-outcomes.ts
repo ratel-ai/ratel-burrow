@@ -9,7 +9,12 @@
  * - First result right = first ÷ ranked
  * - In results = (ranked − missed) ÷ ranked
  * - Missed by search = missed
+ *
+ * A `baseline` search was only observed: the agent chose from its own full tool
+ * list, not Ratel's results. Its calls keep their outcome but stay out of the
+ * rates (`servedOnly`), so a miss there is not counted against Ratel.
  */
+import type { Origin } from "./events.js";
 import type { SessionTimeline } from "./inspector.js";
 
 export type Outcome = "first" | "top3" | "lower" | "missed" | "unknown";
@@ -18,6 +23,8 @@ export interface CallOutcome {
   kind: "tool" | "skill";
   id: string;
   outcome: Outcome;
+  /** Who made the search: the agent, your code (`direct`), or observed only (`baseline`). */
+  origin: Origin;
   rank: number | null;
   failed: boolean;
   ts: number;
@@ -61,6 +68,7 @@ export function callOutcomes(sessions: readonly SessionTimeline[]): CallOutcome[
                 : call.rank <= 3
                   ? "top3"
                   : "lower",
+          origin: search.origin,
           rank: knowsHits ? call.rank : null,
           failed: call.error !== null,
           ts: call.ts,
@@ -72,6 +80,11 @@ export function callOutcomes(sessions: readonly SessionTimeline[]): CallOutcome[
     }
   }
   return out;
+}
+
+/** Calls after searches Ratel actually served: everything but `baseline`. */
+export function servedOnly(outcomes: readonly CallOutcome[]): CallOutcome[] {
+  return outcomes.filter((o) => o.origin !== "baseline");
 }
 
 const emptySummary = (): OutcomeSummary => ({

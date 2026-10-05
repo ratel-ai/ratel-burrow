@@ -97,6 +97,8 @@ export function buildImprovements(input: {
       if (s.kind === "tool" || s.kind === "skill") searchesByKind[s.kind] += 1;
       if (s.hitCount === 0) empty.push(example(s));
       if (s.kind !== "tool" && s.kind !== "skill") continue;
+      // Observed only: the agent never saw Ratel's results, so nothing here is Ratel's to fix.
+      if (s.origin === "baseline") continue;
       // A count-only (gateway) search leaves the rank unknowable: see search-outcomes.ts.
       const knowsHits = s.hits.length > 0 || s.hitCount === 0;
       for (const inv of s.invocations) {
