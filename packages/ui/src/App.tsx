@@ -149,9 +149,6 @@ function Shell() {
           >
             <ExternalLink className="size-3.5" /> Ratel docs
           </a>
-          <div className="flex items-center gap-2">
-            <Eye className="size-3.5" /> Read-only
-          </div>
           <div className="flex items-center gap-2" aria-live="polite">
             <span
               className={cx(
