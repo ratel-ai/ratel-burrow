@@ -216,7 +216,7 @@ export function BoostPanel({ view }: { view: BoostView }) {
       className="rounded-2xl border border-forest-300 bg-forest-600/60 p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-lg font-semibold text-cream">Boost</h2>
+        <h2 className="font-display text-lg font-semibold text-cream">Did learning help?</h2>
         {view.empty ? null : (
           <div className="flex flex-wrap items-center gap-2">
             <div role="radiogroup" aria-label="Metric" className={RADIO}>
@@ -262,8 +262,8 @@ export function BoostPanel({ view }: { view: BoostView }) {
           className="mt-1 text-xs text-warm-muted"
         >
           {view.reported
-            ? "Reported by your runtime where the graph changed a search; the rest replayed locally (BM25)."
-            : "Estimated: searches replayed locally (BM25). Your runtime's ranking may differ."}
+            ? "Where learning changed a search your runtime recorded both rankings; the rest were replayed with your SDK."
+            : "Estimated by replaying your searches with your SDK; your runtime's own ranking may differ."}
         </p>
       ) : null}
 

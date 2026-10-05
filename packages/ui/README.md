@@ -10,7 +10,7 @@ It polls the launcher's read-only API, tails trace files, and builds every view 
 | `src/lib/route.ts` | hash routing (`#/catalog?tab=skills&id=x`) |
 | `src/screens/` | Summary (`Overview.tsx`), Searches (`Inspector.tsx`), Tools (`Catalog.tsx`), Learning (`Adaptive.tsx`) |
 | `src/components/IntentGraphForce.tsx` | the d3-force capability graph, ported from Ratel Cloud |
-| `src/components/adaptive/` | Boost panel, cluster table and drawer, summary tiles, graph state: Ratel Cloud's adaptive-ranking page ([ADR 0004](../../docs/adr/0004-adaptive-ranking-mirrors-cloud.md)) |
+| `src/components/adaptive/` | Boost panel, cluster table and drawer, graph state and warnings: Ratel Cloud's adaptive-ranking page ([ADR 0004](../../docs/adr/0004-adaptive-ranking-mirrors-cloud.md)) |
 | `src/components/catalog/` | catalog table (filter, sort, paging) and entry modal, ported from Ratel Cloud's tools catalog |
 | `src/components/summary/` | the Summary's tokens-saved hero, KPIs with trends, rank mix, search quality, most called, environment footer |
 | `src/lib/terms.ts` | one label and hint per metric, used on every page |
