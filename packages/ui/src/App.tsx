@@ -1,5 +1,5 @@
 import { RANGES, relativeTime, type TimeRange } from "@ratel-ai/burrow-model";
-import { Activity, BookOpen, Eye, HeartPulse, Home, type LucideIcon, Orbit } from "lucide-react";
+import { Activity, BookOpen, Eye, Home, type LucideIcon, Orbit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BadgerMark, BurrowMascot } from "./components/Mascot";
 import { ProjectSwitcher } from "./components/ProjectSwitcher";
@@ -8,27 +8,17 @@ import { BurrowProvider, useBurrow } from "./lib/data";
 import { href, type Page, useRoute } from "./lib/route";
 import { AdaptiveScreen } from "./screens/Adaptive";
 import { CatalogScreen } from "./screens/Catalog";
-import { HealthScreen } from "./screens/Health";
 import { InspectorScreen } from "./screens/Inspector";
 import { OverviewScreen } from "./screens/Overview";
 
 /** Ratel Cloud's sidebar groups and icons (`ScopedSidebar.tsx`), for the pages Burrow has. */
 const NAV: { group: string; items: { page: Page; label: string; icon: LucideIcon }[] }[] = [
-  {
-    group: "Project",
-    items: [
-      { page: "overview", label: "Overview", icon: Home },
-      { page: "health", label: "Agent health", icon: HeartPulse },
-    ],
-  },
-  {
-    group: "Observability",
-    items: [{ page: "inspector", label: "Search inspector", icon: Activity }],
-  },
-  { group: "Capabilities", items: [{ page: "catalog", label: "Catalogs", icon: BookOpen }] },
+  { group: "Project", items: [{ page: "overview", label: "Summary", icon: Home }] },
+  { group: "Observability", items: [{ page: "inspector", label: "Searches", icon: Activity }] },
+  { group: "Capabilities", items: [{ page: "catalog", label: "Tools", icon: BookOpen }] },
   {
     group: "Continuous improvement",
-    items: [{ page: "adaptive", label: "Adaptive ranking", icon: Orbit }],
+    items: [{ page: "adaptive", label: "Learning", icon: Orbit }],
   },
 ];
 
@@ -179,7 +169,6 @@ function Shell() {
           {page === "catalog" && <CatalogScreen />}
           {page === "inspector" && <InspectorScreen />}
           {page === "adaptive" && <AdaptiveScreen />}
-          {page === "health" && <HealthScreen />}
         </div>
       </main>
     </div>

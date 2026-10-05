@@ -139,6 +139,22 @@ function Group({
           ))}
         </ul>
       ) : null}
+      {open && kind !== "empty_searches" ? (
+        <a
+          href={href("catalog", { tab: "tools", attention: "1" })}
+          className="mb-3 ml-7 inline-block text-xs text-green hover:underline"
+        >
+          Open these in Tools →
+        </a>
+      ) : null}
+      {open && kind === "empty_searches" ? (
+        <a
+          href={href("inspector", { filter: "problems" })}
+          className="mb-3 ml-7 inline-block text-xs text-green hover:underline"
+        >
+          Open them in Searches →
+        </a>
+      ) : null}
     </li>
   );
 }

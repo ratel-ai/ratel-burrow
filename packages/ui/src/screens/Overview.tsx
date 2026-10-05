@@ -1,49 +1,55 @@
 import {
   buildImprovements,
-  buildRatelFlow,
-  formatBytes,
+  callOutcomes,
+  firstResultRate,
   formatCount,
   formatPercent,
+  inResultsRate,
+  outcomesByCapability,
   plural,
-  type RatelFlow,
-  relativeTime,
+  summarizeOutcomes,
 } from "@ratel-ai/burrow-model";
-import { ArrowRight, FileJson, FileText, Network, Repeat } from "lucide-react";
-import { useMemo, useState } from "react";
+import { AlertTriangle } from "lucide-react";
+import { useMemo } from "react";
 import { Improvements } from "../components/Improvements";
 import { BurrowMascot } from "../components/Mascot";
-import { Card, Code, cx, Empty, KindDot, Pill } from "../components/ui";
+import { MostCalledCard, RankMixCard, SearchQualityCard } from "../components/summary/Cards";
+import { Environment } from "../components/summary/Environment";
+import { Kpi } from "../components/summary/Kpi";
+import { TokensSaved } from "../components/summary/TokensSaved";
+import { pointDelta, relativeDelta, TrendChip } from "../components/summary/Trend";
+import { Code, Empty } from "../components/ui";
 import { useBurrow } from "../lib/data";
-import { href, type Page } from "../lib/route";
+import { TERMS } from "../lib/terms";
 
-const SOURCE_ICON = {
-  trace: FileText,
-  intent_graph: Network,
-  catalog_snapshot: FileJson,
-  boost_replay: Repeat,
-};
-const SOURCE_KIND = {
-  trace: "trace",
-  intent_graph: "intent graph",
-  catalog_snapshot: "catalog",
-  boost_replay: "replay",
-};
-
+/** Summary: is Ratel working for this agent, and what should be fixed first? */
 export function OverviewScreen() {
-  const { sources, catalog, sessions, savings, boost, boostView, projectGraph, status, project } =
-    useBurrow();
-  const graph = projectGraph?.graph ?? null;
-  const flow = useMemo(
-    () =>
-      buildRatelFlow({ catalog, sessions, savings, boost: boostView, boostStats: boost, graph }),
-    [catalog, sessions, savings, boostView, boost, graph],
-  );
+  const { sources, catalog, sessions, savings, health, previous, status, project } = useBurrow();
+  const outcomeList = useMemo(() => callOutcomes(sessions), [sessions]);
+  const outcomes = useMemo(() => summarizeOutcomes(outcomeList), [outcomeList]);
+  const byTool = useMemo(() => outcomesByCapability(outcomeList), [outcomeList]);
   const improvements = useMemo(() => buildImprovements({ catalog, sessions }), [catalog, sessions]);
-  const recent = sessions
-    .flatMap((s) => s.searches)
-    .sort((a, b) => b.ts - a.ts)
-    .slice(0, 5);
-  const now = Date.now();
+  const missedTools = new Set(
+    outcomeList.filter((o) => o.outcome === "missed").map((o) => `${o.kind}:${o.id}`),
+  ).size;
+  const first = firstResultRate(outcomes);
+  const inResults = inResultsRate(outcomes);
+  const prev = previous?.outcomes ?? null;
+  const attention = new Set(
+    improvements.flatMap((i) =>
+      i.kind === "missed" || i.kind === "buried" || i.kind === "failing" ? [i.id] : [],
+    ),
+  ).size;
+
+  if (status === "ready" && sources.length === 0) return <SetupGuide />;
+
+  const verdict = [
+    savings.basis === "definitions"
+      ? `Ratel kept ~${formatCount(savings.savedTotal)} tokens out of your model's context`
+      : null,
+    first !== null ? `the first result was right ${formatPercent(first)} of the time` : null,
+    attention > 0 ? `${formatCount(attention)} tools need attention` : "nothing needs fixing",
+  ].filter(Boolean);
 
   return (
     <div className="space-y-5">
@@ -57,6 +63,9 @@ export function OverviewScreen() {
               Ratel dug this burrow claw by claw. Now it settles in and watches every search, every
               call, and everything it learns along the way.
             </p>
+            {verdict.length ? (
+              <p className="mt-3 max-w-xl text-sm text-cream">{capitalize(verdict.join("; "))}.</p>
+            ) : null}
           </div>
           <BurrowMascot
             className="hidden w-80 shrink-0 sm:block"
@@ -65,207 +74,93 @@ export function OverviewScreen() {
         </div>
       </section>
 
-      {status === "ready" && sources.length === 0 ? <SetupGuide /> : <HowRatelWorks flow={flow} />}
+      {health.warnings.length ? (
+        <div className="space-y-2 rounded-xl border border-amber/40 bg-amber/5 px-4 py-3 text-sm text-cream-dim">
+          {health.warnings.map((w) => (
+            <div key={w} className="flex gap-2">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber" /> {w}
+            </div>
+          ))}
+        </div>
+      ) : null}
 
-      <Improvements items={improvements} searches={flow.search.searches} />
+      <TokensSaved />
 
-      <div className="grid gap-6 lg:grid-cols-5">
-        <Card
-          title="Latest searches"
-          className="lg:col-span-3"
-          actions={
-            <a className="text-xs text-green hover:underline" href={href("inspector")}>
-              Open inspector →
-            </a>
-          }
-        >
-          {recent.length === 0 ? (
-            <p className="text-sm text-warm-muted">No searches recorded yet.</p>
-          ) : (
-            <ul className="divide-y divide-forest-300/50">
-              {recent.map((s) => (
-                <li key={s.key}>
-                  <a
-                    href={href("inspector", { session: s.sessionId, search: s.key })}
-                    className="flex items-center gap-3 py-2.5 hover:bg-forest-300/20"
-                  >
-                    <KindDot kind={s.kind} />
-                    <span className="min-w-0 flex-1 truncate text-sm">
-                      {s.query || <em className="text-warm-muted">empty query</em>}
-                    </span>
-                    {s.invocations[0] ? (
-                      <Pill tone={s.invocations[0].rank === 1 ? "green" : "amber"}>
-                        {s.invocations[0].rank === null
-                          ? "not retrieved"
-                          : `rank ${s.invocations[0].rank}`}
-                      </Pill>
-                    ) : null}
-                    <span className="w-16 text-right font-mono text-xs text-warm-muted">
-                      {relativeTime(s.ts, now)}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-        <Sources className="self-start lg:col-span-2" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Kpi
+          label={TERMS.firstResult.label}
+          hint={TERMS.firstResult.hint}
+          value={first === null ? "–" : formatPercent(first)}
+          sub={`${formatCount(outcomes.first)} of ${formatCount(outcomes.ranked)} calls`}
+          tone="green"
+          trend={<Points now={first} before={prev ? firstResultRate(prev) : null} upIsGood />}
+        />
+        <Kpi
+          label={TERMS.inResults.label}
+          hint={TERMS.inResults.hint}
+          value={inResults === null ? "–" : formatPercent(inResults)}
+          sub={`${formatCount(outcomes.ranked - outcomes.missed)} of ${formatCount(outcomes.ranked)} calls`}
+          tone={inResults !== null && inResults < 0.8 ? "amber" : "green"}
+          trend={<Points now={inResults} before={prev ? inResultsRate(prev) : null} upIsGood />}
+        />
+        <Kpi
+          label={TERMS.missed.label}
+          hint={TERMS.missed.hint}
+          value={formatCount(outcomes.missed)}
+          sub={`across ${plural(missedTools, "tool")}`}
+          tone={outcomes.missed ? "amber" : "green"}
+          trend={<Count now={outcomes.missed} before={prev?.missed ?? null} upIsGood={false} />}
+        />
+        <Kpi
+          label={TERMS.failed.label}
+          hint={TERMS.failed.hint}
+          value={formatCount(outcomes.failed)}
+          sub={`of ${formatCount(outcomes.calls)} calls`}
+          tone={outcomes.failed ? "coral" : "green"}
+          trend={<Count now={outcomes.failed} before={prev?.failed ?? null} upIsGood={false} />}
+        />
       </div>
+
+      <Improvements items={improvements} searches={savings.searches} />
+
+      <div className="grid gap-5 lg:grid-cols-2">
+        <RankMixCard outcomes={outcomes} />
+        <SearchQualityCard />
+      </div>
+
+      <MostCalledCard byTool={byTool} />
+
+      <Environment />
     </div>
   );
 }
 
-const pct = (n: number, of: number) => (of > 0 ? formatPercent(n / of) : "–");
+const capitalize = (s: string) => (s ? s[0]?.toUpperCase() + s.slice(1) : s);
 
-/** What Ratel does for one request, as five steps with this project's numbers. */
-function HowRatelWorks({ flow }: { flow: RatelFlow }) {
-  const { catalog, search, call, learn, boost } = flow;
-  return (
-    <section>
-      <h2 className="mb-2 text-base font-semibold">How Ratel works</h2>
-      <ol className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
-        <Step
-          title="Catalog"
-          page="catalog"
-          value={`${formatCount(catalog.tools)} tools`}
-          detail={
-            catalog.skills || catalog.facts
-              ? `${catalog.skills} skills · ${catalog.facts} facts`
-              : undefined
-          }
-          hint="What your agent could use; the model never sees the whole list."
-        />
-        <Step
-          title="Search"
-          page="inspector"
-          value={`${formatCount(search.searches)} searches`}
-          detail={search.searches ? `top ${search.avgReturned.toFixed(1)} returned` : undefined}
-          hint="Ratel ranks the catalog and hands the model the top few."
-        />
-        <Step
-          title="Call"
-          page="inspector"
-          value={
-            call.ranked ? `${pct(call.topHit, call.ranked)} first pick` : `${call.calls} calls`
-          }
-          detail={call.ranked ? `${pct(call.inResults, call.ranked)} in results` : undefined}
-          tone={call.ranked && call.notRetrieved / call.ranked > 0.2 ? "amber" : "green"}
-          hint="Was the tool the agent ran Ratel's first result?"
-        />
-        <Step
-          title="Learn"
-          page="adaptive"
-          value={learn ? `${formatCount(learn.intents)} intents` : "Off"}
-          tone={learn ? "green" : "muted"}
-          hint="Similar asks grouped, with the tool that answered each."
-        />
-        <Step
-          title="Boost"
-          page="adaptive"
-          value={
-            boost.recall1
-              ? `${formatPercent(boost.recall1.with)} vs ${formatPercent(boost.recall1.without)}`
-              : boost.active
-                ? `${formatPercent(boost.matchRate)} matched`
-                : "Off"
-          }
-          detail={boost.recall1 ? "with vs without" : undefined}
-          tone={
-            boost.recall1
-              ? boost.recall1.with >= boost.recall1.without
-                ? "green"
-                : "amber"
-              : boost.active
-                ? "green"
-                : "muted"
-          }
-          hint="Learned tools are promoted when a new ask matches. First result right, with the graph vs without."
-        />
-      </ol>
-    </section>
-  );
-}
-
-function Step({
-  title,
-  page,
-  value,
-  detail,
-  hint,
-  tone = "green",
+function Points({
+  now,
+  before,
+  upIsGood,
 }: {
-  title: string;
-  page: Page;
-  value: string;
-  detail?: string;
-  hint: string;
-  tone?: "green" | "amber" | "muted";
+  now: number | null;
+  before: number | null;
+  upIsGood: boolean;
 }) {
-  const dot = { green: "bg-green", amber: "bg-amber", muted: "bg-warm-muted" }[tone];
-  return (
-    <li>
-      <a
-        href={href(page)}
-        title={hint}
-        className="group flex h-full flex-col rounded-xl border border-forest-300/60 bg-forest-600/70 px-3.5 py-3 transition-colors hover:border-green/50 hover:bg-forest-300/20"
-      >
-        <div className="eyebrow flex items-center gap-2">
-          <span className={cx("inline-block size-1.5 rounded-full", dot)} aria-hidden />
-          {title}
-          <ArrowRight className="ml-auto size-3 text-warm-muted transition-colors group-hover:text-green" />
-        </div>
-        <div className="mt-1.5 font-mono text-lg leading-tight text-cream tabular">{value}</div>
-        {detail ? <div className="mt-0.5 text-[11px] text-warm-muted">{detail}</div> : null}
-      </a>
-    </li>
-  );
+  const d = pointDelta(now, before);
+  return d ? <TrendChip text={d.text} up={d.up} good={d.up === upIsGood} /> : null;
 }
 
-function Sources({ className }: { className?: string }) {
-  const { sources, badLines, replayError } = useBurrow();
-  const [open, setOpen] = useState(false);
-  const ordered = [...sources].sort((a, b) => b.mtime - a.mtime);
-  return (
-    <Card title="Files" className={className}>
-      <p className="text-sm text-cream-dim">
-        {plural(ordered.filter((s) => s.kind === "trace").length, "trace")} ·{" "}
-        {plural(ordered.filter((s) => s.kind === "intent_graph").length, "intent graph")}
-        {ordered.some((s) => s.kind === "boost_replay") ? " · replay" : ""}
-      </p>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="mt-2 text-xs text-green hover:underline"
-      >
-        {open ? "Hide files" : "Show files"}
-      </button>
-      {open ? (
-        <ul className="mt-3 space-y-2">
-          {ordered.map((s) => {
-            const Icon = SOURCE_ICON[s.kind];
-            return (
-              <li key={s.id} className="flex items-center gap-2.5 text-sm" title={s.path}>
-                <Icon className="size-4 shrink-0 text-warm-muted" />
-                <span className="min-w-0 flex-1 truncate font-mono text-xs text-cream-dim">
-                  {s.label}
-                </span>
-                <span className="eyebrow">{SOURCE_KIND[s.kind]}</span>
-                <span className="w-14 text-right font-mono text-xs text-warm-muted">
-                  {formatBytes(s.size)}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-      {badLines > 0 || replayError ? (
-        <div className="mt-4 space-y-1 border-t border-forest-300/50 pt-3 text-xs text-warm-muted">
-          {badLines > 0 ? <p>{badLines} unreadable trace lines were skipped.</p> : null}
-          {replayError ? <p>Replay unavailable: {replayError}</p> : null}
-        </div>
-      ) : null}
-    </Card>
-  );
+function Count({
+  now,
+  before,
+  upIsGood,
+}: {
+  now: number;
+  before: number | null;
+  upIsGood: boolean;
+}) {
+  const d = before === null ? null : relativeDelta(now, before);
+  return d ? <TrendChip text={d.text} up={d.up} good={d.up === upIsGood} /> : null;
 }
 
 function SetupGuide() {

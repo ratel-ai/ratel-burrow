@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 
-export type Page = "overview" | "catalog" | "inspector" | "adaptive" | "health";
+export type Page = "overview" | "catalog" | "inspector" | "adaptive";
 
-export const PAGES: Page[] = ["overview", "catalog", "inspector", "adaptive", "health"];
+export const PAGES: Page[] = ["overview", "catalog", "inspector", "adaptive"];
+
+/** Old links keep working: Agent health became part of the Summary. */
+const ALIASES: Record<string, Page> = { health: "overview" };
 
 export interface Route {
   page: Page;
@@ -15,7 +18,7 @@ export interface Route {
  */
 function parse(hash: string): Route {
   const [path = "", query = ""] = hash.replace(/^#\/?/, "").split("?");
-  const page = (PAGES as string[]).includes(path) ? (path as Page) : "overview";
+  const page = (PAGES as string[]).includes(path) ? (path as Page) : (ALIASES[path] ?? "overview");
   return { page, params: new URLSearchParams(query) };
 }
 
