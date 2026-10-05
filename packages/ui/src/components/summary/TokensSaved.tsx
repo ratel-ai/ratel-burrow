@@ -61,9 +61,6 @@ export function TokensSaved() {
             width={full > 0 ? served / full : 0}
             color="bg-green"
           />
-          <p className="text-[11px] text-warm-muted">
-            Estimates from your tool definitions (characters ÷ 4); no baseline run needed.
-          </p>
         </div>
       </div>
 
