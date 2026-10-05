@@ -15,7 +15,6 @@ function Row({ label, value, title }: { label: string; value: string; title?: st
 export function GraphMeta({ doc, file }: { doc: IntentGraphDocument; file: string }) {
   return (
     <dl className="flex min-w-56 flex-col gap-1">
-      <Row label="File" value={file} />
       <Row
         label="Built from"
         value={relativeTime(doc.built_from_ts)}
@@ -24,6 +23,7 @@ export function GraphMeta({ doc, file }: { doc: IntentGraphDocument; file: strin
       <Row label="Revision" value={`rev ${doc.rev ?? 0}`} />
       <Row label="Model" value={modelLabel(doc.model ?? null)} title={doc.model} />
       <Row label="Schema" value={`v${doc.v}`} />
+      <Row label="File" value={file} />
     </dl>
   );
 }
