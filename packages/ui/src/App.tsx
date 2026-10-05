@@ -1,5 +1,5 @@
 import { RANGES, relativeTime, type TimeRange } from "@ratel-ai/burrow-model";
-import { Activity, BookOpen, ExternalLink, Eye, Home, type LucideIcon, Orbit } from "lucide-react";
+import { Activity, BookOpen, ExternalLink, Home, type LucideIcon, Orbit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BadgerMark, BurrowMascot } from "./components/Mascot";
 import { ProjectSwitcher } from "./components/ProjectSwitcher";
