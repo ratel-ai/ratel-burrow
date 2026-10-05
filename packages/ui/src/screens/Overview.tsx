@@ -47,19 +47,17 @@ export function OverviewScreen() {
 
   return (
     <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-2xl border border-forest-300/60 bg-forest-600/60 px-5 py-3">
+      <section className="relative overflow-hidden rounded-2xl border border-forest-300/60 bg-forest-600/60 px-6">
         <div className="pixel-grid pixel-grid-fade pointer-events-none absolute inset-0 opacity-60" />
-        <div className="relative flex flex-wrap items-center gap-6">
+        <div className="relative flex items-center justify-between gap-6">
+          <div className="min-w-0 py-6">
+            <div className="eyebrow">Ratel Burrow{project ? ` · ${project}` : ""}</div>
+            <h1 className="mt-1 text-3xl font-semibold tracking-tight">See what Ratel is doing.</h1>
+          </div>
           <BurrowMascot
-            className="w-32 shrink-0"
+            className="hidden w-80 shrink-0 sm:block"
             title="A honey badger peering out of its burrow"
           />
-          <div className="min-w-64 flex-1">
-            <div className="eyebrow">Ratel Burrow{project ? ` · ${project}` : ""}</div>
-            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
-              See what Ratel is doing.
-            </h1>
-          </div>
         </div>
       </section>
 
