@@ -53,16 +53,10 @@ export function AdaptiveScreen() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        eyebrow="Adaptive ranking"
-        title="Intent graph"
-        actions={loaded?.graph ? <GraphMeta doc={loaded.graph} file={loaded.source.label} /> : null}
-      />
-
-      <GraphWarnings warnings={warning ? [warning] : []} />
-
       {!loaded ? (
         <>
+          <PageHeader eyebrow="Adaptive ranking" title="Intent graph" />
+          <GraphWarnings warnings={warning ? [warning] : []} />
           <GraphState state={state} seededShare={null} />
           <Empty title="No intent graph found">
             Save your graph with{" "}
@@ -72,15 +66,20 @@ export function AdaptiveScreen() {
           <BoostPanel view={boost} />
         </>
       ) : loaded.error || !loaded.graph ? (
-        <Empty title={`Could not read ${loaded.source.label}`}>{loaded.error}</Empty>
+        <>
+          <PageHeader eyebrow="Adaptive ranking" title="Intent graph" />
+          <Empty title={`Could not read ${loaded.source.label}`}>{loaded.error}</Empty>
+        </>
       ) : (
         <GraphPage
           key={loaded.source.id}
           doc={loaded.graph}
           byteSize={loaded.source.size}
+          file={loaded.source.label}
           missing={missing}
           state={state}
           boost={boost}
+          warning={warning}
         />
       )}
     </div>
@@ -103,12 +102,16 @@ const MODES: ReadonlyArray<{ id: GraphMode; label: string; caption: string }> = 
 function GraphPage({
   doc,
   byteSize,
+  file,
+  warning,
   missing,
   state,
   boost,
 }: {
   doc: IntentGraphDocument;
   byteSize: number;
+  file: string;
+  warning: string | null;
   missing: ReadonlySet<string>;
   state: RankingState;
   boost: BoostView;
@@ -150,7 +153,18 @@ function GraphPage({
 
   return (
     <>
-      <GraphState state={state} seededShare={seededShare} />
+      {/* Title and state on the left, the graph's provenance beside them, both on the tiles' edge. */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="eyebrow">Adaptive ranking</div>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-cream">Intent graph</h1>
+          <div className="mt-3">
+            <GraphState state={state} seededShare={seededShare} />
+          </div>
+        </div>
+        <GraphMeta doc={doc} file={file} />
+      </header>
+      <GraphWarnings warnings={warning ? [warning] : []} />
       <SummaryTiles tiles={tiles} byteSize={byteSize} />
 
       <section className="rounded-2xl border border-forest-300 bg-forest-600/60 p-5">
