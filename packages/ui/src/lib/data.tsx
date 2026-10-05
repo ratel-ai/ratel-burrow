@@ -9,19 +9,28 @@ import {
   buildInspector,
   type Catalog,
   type CatalogSnapshotFile,
+  callOutcomes,
   estimateSavings,
   type Health,
   type IntentGraphDocument,
+  inWindow,
+  isRange,
   listProjects,
+  type OutcomeSummary,
   type ProjectSummary,
   parseBoostReplay,
   parseIntentGraph,
+  previousWindow,
   projectFileName,
   type SavingsEstimate,
   type SessionTimeline,
   scopeToProject,
+  summarizeOutcomes,
+  type TimeRange,
+  type TimeWindow,
   type TraceEvent,
   TraceTail,
+  windowFor,
 } from "@ratel-ai/burrow-model";
 import {
   createContext,
@@ -57,8 +66,18 @@ export interface BurrowData {
   /** The selected project; every model below is scoped to it. */
   project: string | null;
   setProject: (id: string) => void;
-  /** The selected project's events. */
+  /** The time range every page reads, ending at the latest event. */
+  range: TimeRange;
+  setRange: (range: TimeRange) => void;
+  window: TimeWindow | null;
+  /** The newest event's time in the selected project, for freshness. */
+  latestTs: number | null;
+  /** The selected project's events inside the range. */
   events: TraceEvent[];
+  /** The selected project's events over all time (learning history). */
+  allEvents: TraceEvent[];
+  /** The same figures for the window just before, for trends; null for "all" or no data. */
+  previous: { outcomes: OutcomeSummary; savedTotal: number } | null;
   badLines: number;
   catalog: Catalog;
   sessions: SessionTimeline[];
@@ -107,6 +126,20 @@ interface RawState {
 }
 
 const PROJECT_KEY = "burrow.project";
+const RANGE_KEY = "burrow.range";
+
+/** `#/...?range=7d`, else the last one chosen, else 7 days. */
+function rememberedRange(): TimeRange {
+  const fromUrl = new URLSearchParams(window.location.hash.split("?")[1] ?? "").get("range");
+  if (isRange(fromUrl)) return fromUrl;
+  try {
+    const stored = window.localStorage.getItem(RANGE_KEY);
+    if (isRange(stored)) return stored;
+  } catch {
+    // fall through
+  }
+  return "7d";
+}
 
 /** `#/...?project=<id>` opens a project directly (shareable); otherwise the last one chosen. */
 function rememberedProject(): string | null {
@@ -125,6 +158,15 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
     setChosenProject(id);
     try {
       window.localStorage.setItem(PROJECT_KEY, id);
+    } catch {
+      // a convenience only
+    }
+  };
+  const [range, setRangeState] = useState<TimeRange>(rememberedRange);
+  const setRange = (next: TimeRange) => {
+    setRangeState(next);
+    try {
+      window.localStorage.setItem(RANGE_KEY, next);
     } catch {
       // a convenience only
     }
@@ -265,18 +307,40 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
     all.projects.find((p) => p.id === chosenProject)?.id ?? all.projects[0]?.id ?? null;
 
   const derived = useMemo(() => {
-    const events = scopeToProject(all.events, project);
-    const catalog = buildCatalog(events, raw.snapshot);
+    const allEvents = scopeToProject(all.events, project);
+    const latestTs = allEvents.at(-1)?.ts ?? null;
+    const win = latestTs === null ? null : windowFor(range, latestTs);
+    const events = win ? inWindow(allEvents, win) : allEvents;
+    // Definitions come from every event; usage only from the range.
+    const catalog = buildCatalog(allEvents, raw.snapshot, { since: win?.from });
+    const sessions = buildInspector(events);
+    const savings = estimateSavings(events, catalog);
+
+    const prevWindow = latestTs === null ? null : previousWindow(range, latestTs);
+    const prevEvents = prevWindow ? inWindow(allEvents, prevWindow) : [];
+    const previous =
+      prevEvents.length > 0
+        ? {
+            outcomes: summarizeOutcomes(callOutcomes(buildInspector(prevEvents))),
+            savedTotal: estimateSavings(prevEvents, catalog).savedTotal,
+          }
+        : null;
+
     return {
       events,
+      allEvents,
+      latestTs,
+      window: win,
+      previous,
       catalog,
-      sessions: buildInspector(events),
+      sessions,
       health: buildHealth(events),
-      savings: estimateSavings(events, catalog),
-      boost: buildBoostStats(events),
-      boostView: buildBoostFromTrace(events, { replay: raw.replay }),
+      savings,
+      // Learning is cumulative: the Boost view reads the project's whole history.
+      boost: buildBoostStats(allEvents),
+      boostView: buildBoostFromTrace(allEvents, { replay: raw.replay }),
     };
-  }, [all, project, raw.snapshot, raw.replay]);
+  }, [all, project, range, raw.snapshot, raw.replay]);
 
   const value: BurrowData = {
     status: raw.status,
@@ -284,6 +348,8 @@ export function BurrowProvider({ children }: { children: ReactNode }) {
     projects: all.projects,
     project,
     setProject,
+    range,
+    setRange,
     badLines: all.badLines,
     graphs: raw.graphs,
     projectGraph: graphForProject(raw.graphs, project),

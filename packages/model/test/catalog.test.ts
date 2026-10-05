@@ -59,4 +59,14 @@ describe("buildCatalog", () => {
     });
     expect(catalog.skills[0]).toMatchObject({ id: "k", tags: ["x"] });
   });
+
+  it("keeps every definition but counts usage only after `since`", () => {
+    const events = v2Events();
+    const last = Math.max(...events.map((e) => e.ts));
+    const catalog = buildCatalog(events, null, { since: last });
+    const refund = catalog.tools.find((t) => t.id === "stripe_refund");
+    expect(refund?.defined).toBe(true);
+    expect(refund?.description).toBe("Refund a Stripe charge");
+    expect(refund?.stats).toMatchObject({ retrieved: 0, invoked: 0 });
+  });
 });

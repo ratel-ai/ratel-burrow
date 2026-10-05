@@ -79,7 +79,10 @@ function pick(record: Record<string, unknown>, camel: string, snake: string): un
 export function buildCatalog(
   events: readonly TraceEvent[],
   snapshot?: CatalogSnapshotFile | null,
+  /** `since`: count usage only after this time; definitions always come from every event. */
+  options: { since?: number } = {},
 ): Catalog {
+  const since = options.since ?? Number.NEGATIVE_INFINITY;
   const maps: Record<CatalogKind, Map<string, CatalogEntry>> = {
     tool: new Map(),
     skill: new Map(),
@@ -152,6 +155,8 @@ export function buildCatalog(
       const e = entry(kind, id);
       e.removed = ev.kind === "remove";
       seen(e, ev.ts);
+    } else if (ev.ts <= since) {
+      // Usage before the window: the entry's definition above still counts.
     } else if (isEvent(ev, "fact_inject")) {
       const e = entry("fact", ev.fact_id);
       e.stats.invoked += 1;
@@ -180,6 +185,7 @@ export function buildCatalog(
   // Calls only update entries the catalog knows; an unknown id (a typo, say) is not a tool.
   const latencies = new Map<CatalogEntry, number[]>();
   for (const call of collectInvocations(events)) {
+    if (call.ts <= since) continue;
     const e = maps[call.kind].get(call.id);
     if (!e) continue;
     e.stats.invoked += 1;

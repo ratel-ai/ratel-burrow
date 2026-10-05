@@ -22,3 +22,4 @@ export * from "./savings.js";
 export * from "./search-outcomes.js";
 export * from "./stats.js";
 export * from "./tail.js";
+export * from "./time-range.js";
