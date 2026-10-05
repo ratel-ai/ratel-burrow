@@ -118,6 +118,10 @@ describe("turns from the trace", () => {
       ["junk", 0],
       ["wasted_calls", 0],
     ]);
+    const counts = (key: string) => health.tiles.find((t) => t.key === key);
+    expect(counts("first_try")).toMatchObject({ count: 1, n: 1 });
+    expect(counts("detours")).toMatchObject({ count: 0, n: 2 });
+    expect(counts("wasted_calls")).toMatchObject({ count: 0, n: 2 });
     expect(health.shapes.find((s) => s.shape === "direct")?.count).toBe(1);
     expect(health.shapes.find((s) => s.shape === "dead_end")?.count).toBe(1);
   });

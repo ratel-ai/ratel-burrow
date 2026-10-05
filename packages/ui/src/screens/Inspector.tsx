@@ -77,24 +77,7 @@ export function InspectorScreen() {
             onFilter={setFilter}
           />
           <div className="min-w-0 space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0">
-                {toolFilter ? (
-                  <div className="flex items-center gap-2 text-sm">
-                    Searches that led to <span className="font-mono text-cream">{toolFilter}</span>
-                    <a className="text-xs text-green hover:underline" href={href("inspector")}>
-                      clear
-                    </a>
-                  </div>
-                ) : session ? (
-                  <div className="text-sm text-cream-dim">
-                    Session <span className="font-mono text-cream">{session.sessionId}</span>
-                    {session.sourceId ? (
-                      <span className="text-warm-muted"> · {session.sourceId}</span>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
+            <div className="flex flex-wrap items-center gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <Tabs<Filter>
                   value={filter}
@@ -112,6 +95,14 @@ export function InspectorScreen() {
                 />
               </div>
             </div>
+            {toolFilter ? (
+              <div className="flex items-center gap-2 text-sm">
+                Searches that led to <span className="font-mono text-cream">{toolFilter}</span>
+                <a className="text-xs text-green hover:underline" href={href("inspector")}>
+                  clear
+                </a>
+              </div>
+            ) : null}
             {session && !toolFilter && session.orphans.length > 0 ? (
               <Card title="Calls before any search" hint="Called without a Ratel search first.">
                 <CallList calls={session.orphans} />

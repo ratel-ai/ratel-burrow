@@ -59,7 +59,6 @@ export function OverviewScreen() {
             <h1 className="mt-0.5 text-2xl font-semibold tracking-tight">
               See what Ratel is doing.
             </h1>
-            <p className="mt-1 text-sm text-warm-muted">Local and read-only.</p>
           </div>
         </div>
       </section>

@@ -36,6 +36,8 @@ export interface HealthTile {
   sub: string;
   delta: number | null;
   series: TilePoint[];
+  /** What the figure counts (turns, hits or wasted calls), over `n`. */
+  count: number;
   n: number;
 }
 export interface TurnShapeView {
@@ -164,6 +166,7 @@ const fmt = (n: number) => n.toLocaleString("en-US");
 interface TileReading {
   value: number | null;
   interval: Interval | null;
+  count: number;
   n: number;
   sub: string;
 }
@@ -174,6 +177,7 @@ export function readTile(key: HealthTileKey, t: DayBucket): TileReading {
       return {
         value: t.firstTryN > 0 ? t.firstTry / t.firstTryN : null,
         interval: wilsonInterval(t.firstTry, t.firstTryN),
+        count: t.firstTry,
         n: t.firstTryN,
         sub: `${fmt(t.firstTry)} of ${fmt(t.firstTryN)} turns found each tool on the first search for it.`,
       };
@@ -181,6 +185,7 @@ export function readTile(key: HealthTileKey, t: DayBucket): TileReading {
       return {
         value: t.detourN > 0 ? t.detours / t.detourN : null,
         interval: wilsonInterval(t.detours, t.detourN),
+        count: t.detours,
         n: t.detourN,
         sub: `${fmt(t.detours)} of ${fmt(t.detourN)} turns that searched had to search again for the same thing.`,
       };
@@ -188,6 +193,7 @@ export function readTile(key: HealthTileKey, t: DayBucket): TileReading {
       return {
         value: t.scored > 0 ? t.junk / t.scored : null,
         interval: wilsonInterval(t.junk, t.scored),
+        count: t.junk,
         n: t.scored,
         sub: `${fmt(t.junk)} of ${fmt(t.scored)} listed hits scored well below the top hit.`,
       };
@@ -195,6 +201,7 @@ export function readTile(key: HealthTileKey, t: DayBucket): TileReading {
       return {
         value: t.turns > 0 ? (t.wasted / t.turns) * 100 : null,
         interval: rateInterval(t.wasted, t.turns),
+        count: t.wasted,
         n: t.turns,
         sub: `${fmt(t.wasted)} repeats, retries and calls followed by a search for the same thing.`,
       };
@@ -239,6 +246,7 @@ export function tilesFor(
       sub: ready ? reading.sub : "Waiting for enough turns.",
       delta: ready && reading.value !== null && prev !== null ? reading.value - prev : null,
       series,
+      count: reading.count,
       n: reading.n,
     };
   });
