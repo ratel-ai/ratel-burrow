@@ -499,7 +499,7 @@ function describeHover(
     }
     return {
       title: `${s.label} · ${t.label}`,
-      lines: [`answer the same ${link.value === 1 ? "intent" : `${link.value} intents`}`],
+      lines: [`answer the same ${link.value === 1 ? "pattern" : `${link.value} patterns`}`],
     };
   }
   const node = byId.get(hover.id);

@@ -60,7 +60,7 @@ export function ClusterTable({
   const visible = rows.slice(offset, offset + pageSize);
   const now = Date.now();
   if (rows.length === 0) {
-    return <p className="text-sm text-warm-muted">This graph has no clusters yet.</p>;
+    return <p className="text-sm text-warm-muted">Nothing learned yet.</p>;
   }
   return (
     <div>
@@ -72,10 +72,10 @@ export function ClusterTable({
         <table className="w-full min-w-[760px] table-fixed border-collapse">
           <thead>
             <tr className="border-b border-forest-300">
-              <th className={`${TH} w-[34%]`}>Cluster</th>
-              <th className={`${TH} w-[8%] text-right`}>Members</th>
-              <th className={`${TH} w-[10%]`}>Support</th>
-              <th className={`${TH} w-[8%]`}>Edges</th>
+              <th className={`${TH} w-[34%]`}>Pattern</th>
+              <th className={`${TH} w-[8%] text-right`}>Phrasings</th>
+              <th className={`${TH} w-[10%]`}>Searches</th>
+              <th className={`${TH} w-[8%]`}>Tools</th>
               <th className={`${TH} w-[16%]`}>Top tool</th>
               <th className={`${TH} w-[16%]`}>Top skill</th>
               <th className={`${TH} w-[8%]`}>Last seen</th>
@@ -136,7 +136,7 @@ export function ClusterTable({
       </div>
       {pageCount > 1 ? (
         <nav
-          aria-label="Cluster pages"
+          aria-label="Pattern pages"
           className="mt-3 flex items-center justify-end gap-2 text-xs text-warm-muted"
         >
           <button
