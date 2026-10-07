@@ -115,7 +115,8 @@ export function InspectorScreen() {
   const searches = useMemo(() => {
     const q = query.trim().toLowerCase();
     return base.filter((s) => {
-      if (origin && s.origin !== origin) return false;
+      // A filter on a hidden chip (one origin left) would only hide searches.
+      if (origin && origins.length > 1 && s.origin !== origin) return false;
       if (filter === "called" && s.invocations.length === 0) return false;
       if (filter === "problems" && !hasProblem(s)) return false;
       if (!q) return true;
@@ -125,7 +126,7 @@ export function InspectorScreen() {
         s.invocations.some((c) => c.id.toLowerCase().includes(q))
       );
     });
-  }, [base, query, filter, origin]);
+  }, [base, query, filter, origin, origins]);
 
   return (
     <div>
@@ -159,7 +160,8 @@ export function InspectorScreen() {
                 onChange={setQuery}
                 placeholder="Filter by query or tool…"
               />
-              {origins.length > 0 ? (
+              {/* Origin only tells searches apart when there is more than one. */}
+              {origins.length > 1 ? (
                 <div className="flex flex-wrap items-center gap-1.5">
                   {origins.map(({ origin: o, count }) => (
                     <button
@@ -208,6 +210,7 @@ export function InspectorScreen() {
                       search={s}
                       focused={s.key === focusKey}
                       open={s.key === openKey}
+                      showOrigin={origins.length > 1}
                       onToggle={() => setOpenKey((k) => (k === s.key ? null : s.key))}
                     />
                   ))}
@@ -340,11 +343,13 @@ function SearchRow({
   focused,
   open,
   onToggle,
+  showOrigin,
 }: {
   search: SearchRecord;
   focused: boolean;
   open: boolean;
   onToggle: () => void;
+  showOrigin: boolean;
 }) {
   const ref = useRef<HTMLLIElement>(null);
   // Details stay mounted while they fold away, then unmount.
@@ -394,15 +399,17 @@ function SearchRow({
         <span className="hidden w-44 shrink-0 truncate text-right font-mono text-xs text-cream-dim md:inline">
           {call?.id ?? ""}
         </span>
-        <span
-          className={cx(
-            "hidden w-16 shrink-0 text-right font-mono text-[11px] lg:inline",
-            search.origin === "baseline" ? "text-amber" : "text-warm-muted",
-          )}
-          title={ORIGINS[search.origin].hint}
-        >
-          {ORIGINS[search.origin].label}
-        </span>
+        {showOrigin ? (
+          <span
+            className={cx(
+              "hidden w-16 shrink-0 text-right font-mono text-[11px] lg:inline",
+              search.origin === "baseline" ? "text-amber" : "text-warm-muted",
+            )}
+            title={ORIGINS[search.origin].hint}
+          >
+            {ORIGINS[search.origin].label}
+          </span>
+        ) : null}
         <span className="flex w-24 shrink-0 justify-end">
           <Pill tone={tone === "muted" ? undefined : tone}>{outcome.label}</Pill>
         </span>
