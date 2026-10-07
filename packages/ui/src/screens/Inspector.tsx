@@ -12,7 +12,15 @@ import {
   servedOnly,
   summarizeOutcomes,
 } from "@ratel-ai/burrow-model";
-import { ChevronRight, CircleCheck, CircleX, Sparkles } from "lucide-react";
+import {
+  ChevronRight,
+  CircleCheck,
+  CircleX,
+  Search,
+  SearchX,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScoreBar } from "../components/charts";
 import { Card, cx, Empty, KindDot, PageHeader, Pill, SearchInput, Tabs } from "../components/ui";
@@ -120,7 +128,7 @@ export function InspectorScreen() {
       {sessions.length === 0 ? (
         <Empty title="No searches yet">Searches appear here as soon as Ratel logs them.</Empty>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <div className="space-y-4">
           <SessionList sessions={sessions} activeId={toolFilter ? null : sessionId} />
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -213,6 +221,7 @@ const MIX_PARTS = [
   { key: "missed", color: "bg-coral/80" },
 ] as const;
 
+/** Sessions as one scrollable strip, newest first, so the searches below get the full width. */
 function SessionList({
   sessions,
   activeId,
@@ -221,56 +230,91 @@ function SessionList({
   activeId: string | null;
 }) {
   const now = Date.now();
+  const active = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    active.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, []);
   return (
-    <nav className="space-y-1.5 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
-      <div className="eyebrow px-1 pb-1">Sessions · {sessions.length}</div>
-      {sessions.map((s) => {
-        const mix = summarizeOutcomes(servedOnly(callOutcomes([s])));
-        return (
-          <a
-            key={s.sessionId}
-            href={href("inspector", { session: s.sessionId })}
-            className={cx(
-              "block rounded-lg border px-3 py-2.5 transition-colors",
-              s.sessionId === activeId
-                ? "border-green/60 bg-forest-300/50"
-                : "border-forest-300/60 bg-forest-600/60 hover:bg-forest-300/30",
-            )}
-          >
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="truncate font-mono text-xs text-cream" title={s.sessionId}>
-                {s.sessionId.slice(0, 8)}
-              </span>
-              <span className="shrink-0 text-[11px] text-warm-muted">
-                {relativeTime(s.end, now)}
-              </span>
-            </div>
-            <div className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] text-warm-muted">
-              <span>{plural(s.stats.searches, "search", "searches")}</span>
-              {mix.ranked ? (
-                <span className="text-cream-dim" title={TERMS.firstResult.hint}>
-                  {formatPercent(mix.first / mix.ranked)} first right
+    <nav aria-label="Sessions">
+      <div className="eyebrow px-1 pb-1.5">Sessions · {sessions.length}</div>
+      <div className="flex snap-x gap-2 overflow-x-auto pb-1">
+        {sessions.map((s) => {
+          const mix = summarizeOutcomes(servedOnly(callOutcomes([s])));
+          const isActive = s.sessionId === activeId;
+          return (
+            <a
+              key={s.sessionId}
+              ref={isActive ? active : undefined}
+              href={href("inspector", { session: s.sessionId })}
+              aria-current={isActive ? "page" : undefined}
+              className={cx(
+                "block w-52 shrink-0 snap-start rounded-lg border px-3 py-2 transition-colors",
+                isActive
+                  ? "border-green/60 bg-forest-300/50"
+                  : "border-forest-300/60 bg-forest-600/60 hover:bg-forest-300/30",
+              )}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="truncate font-mono text-xs text-cream" title={s.sessionId}>
+                  {s.sessionId.slice(0, 8)}
                 </span>
-              ) : null}
-              {mix.missed ? <span className="text-amber">{mix.missed} missed</span> : null}
-              {s.stats.errors ? <span className="text-coral">{s.stats.errors} failed</span> : null}
-            </div>
-            <div className="mt-2 flex h-1.5 gap-px overflow-hidden rounded-full bg-forest-300/40">
-              {mix.ranked
-                ? MIX_PARTS.map((p) =>
-                    mix[p.key] ? (
-                      <div
-                        key={p.key}
-                        className={p.color}
-                        style={{ width: `${(mix[p.key] / mix.ranked) * 100}%` }}
-                      />
-                    ) : null,
-                  )
-                : null}
-            </div>
-          </a>
-        );
-      })}
+                <span className="shrink-0 text-[11px] text-warm-muted">
+                  {relativeTime(s.end, now)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center gap-x-3 whitespace-nowrap font-mono text-[11px] text-warm-muted">
+                <span
+                  className="inline-flex items-center gap-1"
+                  title={plural(s.stats.searches, "search", "searches")}
+                >
+                  <Search className="size-3" strokeWidth={1.8} aria-hidden />
+                  {s.stats.searches}
+                </span>
+                {mix.ranked ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-cream-dim"
+                    title={`${TERMS.firstResult.label}: ${TERMS.firstResult.hint}`}
+                  >
+                    <Target className="size-3" strokeWidth={1.8} aria-hidden />
+                    {formatPercent(mix.first / mix.ranked)}
+                  </span>
+                ) : null}
+                {mix.missed ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-amber"
+                    title={`${mix.missed} ${TERMS.missed.label.toLowerCase()}`}
+                  >
+                    <SearchX className="size-3" strokeWidth={1.8} aria-hidden />
+                    {mix.missed}
+                  </span>
+                ) : null}
+                {s.stats.errors ? (
+                  <span
+                    className="inline-flex items-center gap-1 text-coral"
+                    title={`${s.stats.errors} ${TERMS.failed.label.toLowerCase()}`}
+                  >
+                    <CircleX className="size-3" strokeWidth={1.8} aria-hidden />
+                    {s.stats.errors}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-1.5 flex h-1 gap-px overflow-hidden rounded-full bg-forest-300/40">
+                {mix.ranked
+                  ? MIX_PARTS.map((p) =>
+                      mix[p.key] ? (
+                        <div
+                          key={p.key}
+                          className={p.color}
+                          style={{ width: `${(mix[p.key] / mix.ranked) * 100}%` }}
+                        />
+                      ) : null,
+                    )
+                  : null}
+              </div>
+            </a>
+          );
+        })}
+      </div>
     </nav>
   );
 }
