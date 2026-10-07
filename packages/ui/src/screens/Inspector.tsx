@@ -76,6 +76,11 @@ export function InspectorScreen() {
   });
   const [shown, setShown] = useState(PAGE);
   const [origin, setOrigin] = useState<Origin | null>(null);
+  // One search open at a time: opening another closes the last.
+  const [openKey, setOpenKey] = useState<string | null>(focusKey);
+  useEffect(() => {
+    if (focusKey) setOpenKey(focusKey);
+  }, [focusKey]);
 
   const session = sessions.find((s) => s.sessionId === sessionId) ?? null;
   const base = useMemo(() => {
@@ -193,7 +198,13 @@ export function InspectorScreen() {
               <>
                 <ul className="divide-y divide-forest-300/40 overflow-hidden rounded-xl border border-forest-300/60 bg-forest-600/70">
                   {searches.slice(0, shown).map((s) => (
-                    <SearchRow key={s.key} search={s} focused={s.key === focusKey} />
+                    <SearchRow
+                      key={s.key}
+                      search={s}
+                      focused={s.key === focusKey}
+                      open={s.key === openKey}
+                      onToggle={() => setOpenKey((k) => (k === s.key ? null : s.key))}
+                    />
                   ))}
                 </ul>
                 {searches.length > shown ? (
@@ -319,14 +330,33 @@ function SessionList({
   );
 }
 
-function SearchRow({ search, focused }: { search: SearchRecord; focused: boolean }) {
+function SearchRow({
+  search,
+  focused,
+  open,
+  onToggle,
+}: {
+  search: SearchRecord;
+  focused: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
   const ref = useRef<HTMLLIElement>(null);
-  const [open, setOpen] = useState(focused);
+  // Details stay mounted while they fold away, then unmount.
+  const [mounted, setMounted] = useState(open);
+  const header = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (focused) {
-      setOpen(true);
-      ref.current?.scrollIntoView({ block: "center" });
-    }
+    if (!open) return;
+    setMounted(true);
+    // A row closing above shifts this one up; keep its header in view once it settles.
+    const t = setTimeout(
+      () => header.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+      320,
+    );
+    return () => clearTimeout(t);
+  }, [open]);
+  useEffect(() => {
+    if (focused) ref.current?.scrollIntoView({ block: "center" });
   }, [focused]);
   const outcome = outcomeOf(search);
   // An observed search's outcome is shown, but muted: Ratel's results never reached the agent.
@@ -339,14 +369,15 @@ function SearchRow({ search, focused }: { search: SearchRecord; focused: boolean
   return (
     <li ref={ref} className={cx(focused && "bg-forest-300/20")}>
       <button
+        ref={header}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggle}
         aria-expanded={open}
         className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-forest-300/20"
       >
         <ChevronRight
           className={cx(
-            "size-3.5 shrink-0 text-warm-muted transition-transform",
+            "size-3.5 shrink-0 text-warm-muted transition-transform duration-300 ease-out motion-reduce:transition-none",
             open && "rotate-90",
           )}
           aria-hidden
@@ -384,75 +415,93 @@ function SearchRow({ search, focused }: { search: SearchRecord; focused: boolean
         </span>
       </button>
 
-      {open ? (
-        <div className="space-y-3 border-t border-forest-300/40 bg-base-deep/30 px-4 py-3 pl-11">
-          <div className="break-words text-sm text-cream">{search.query}</div>
-          {search.boost?.intent ? (
-            <div className="flex items-center gap-1.5 text-xs text-green">
-              <Sparkles className="size-3.5" /> Learning matched a past pattern (
-              {search.boost.intent}) and promoted {plural(search.boost.promoted, "tool")}.
-            </div>
-          ) : null}
-          {search.hits.length === 0 ? (
-            <p className="text-sm text-warm-muted">
-              {search.hitCount === 0
-                ? "Nothing in the catalog matched this query."
-                : `${search.hitCount} results (this log records only the count).`}
-            </p>
-          ) : (
-            <ol className="space-y-0.5">
-              <li className="flex gap-3 px-2 pb-1 font-mono text-[10px] uppercase tracking-wide text-warm-muted/70">
-                <span className="w-5" />
-                <span className="w-40" title={TERMS.relevance.hint}>
-                  Relevance
-                </span>
-                <span>Result</span>
-              </li>
-              {search.hits.map((h, i) => {
-                const c = search.invocations.find((x) => x.id === h.id);
-                const r = relevance[i] ?? 0;
-                return (
-                  <li
-                    key={h.id}
-                    className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-forest-300/20"
-                  >
-                    <span className="w-5 text-right font-mono text-xs text-warm-muted">
-                      {i + 1}
+      <div
+        className={cx(
+          "grid transition-[grid-template-rows,opacity] duration-300 ease-out motion-reduce:transition-none",
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+        )}
+        onTransitionEnd={(e) => {
+          if (e.target === e.currentTarget && !open) setMounted(false);
+        }}
+        inert={!open}
+      >
+        <div className="min-h-0 overflow-hidden">
+          {mounted ? (
+            <div
+              className={cx(
+                "space-y-3 border-t border-forest-300/40 bg-base-deep/30 px-4 py-3 pl-11 transition-transform duration-300 ease-out motion-reduce:transition-none",
+                open ? "translate-y-0" : "-translate-y-1",
+              )}
+            >
+              <div className="break-words text-sm text-cream">{search.query}</div>
+              {search.boost?.intent ? (
+                <div className="flex items-center gap-1.5 text-xs text-green">
+                  <Sparkles className="size-3.5" /> Learning matched a past pattern (
+                  {search.boost.intent}) and promoted {plural(search.boost.promoted, "tool")}.
+                </div>
+              ) : null}
+              {search.hits.length === 0 ? (
+                <p className="text-sm text-warm-muted">
+                  {search.hitCount === 0
+                    ? "Nothing in the catalog matched this query."
+                    : `${search.hitCount} results (this log records only the count).`}
+                </p>
+              ) : (
+                <ol className="space-y-0.5">
+                  <li className="flex gap-3 px-2 pb-1 font-mono text-[10px] uppercase tracking-wide text-warm-muted/70">
+                    <span className="w-5" />
+                    <span className="w-40" title={TERMS.relevance.hint}>
+                      Relevance
                     </span>
-                    <span
-                      className="flex w-40 items-center gap-2"
-                      title={`raw score ${h.score.toFixed(3)}`}
-                    >
-                      <ScoreBar ratio={r} color={KIND_COLOR[search.kind]} />
-                      <span className="w-10 text-right font-mono text-[11px] text-cream-dim">
-                        {formatPercent(r)}
-                      </span>
-                    </span>
-                    <a
-                      href={href("catalog", { tab: `${search.kind}s`, id: h.id })}
-                      className="min-w-0 flex-1 truncate font-mono text-[13px] text-cream-dim hover:text-cream hover:underline"
-                    >
-                      {h.id}
-                    </a>
-                    {c ? (
-                      <Pill tone={c.error ? "coral" : "green"}>
-                        {c.error ? "called · failed" : "called"}
-                      </Pill>
-                    ) : null}
+                    <span>Result</span>
                   </li>
-                );
-              })}
-            </ol>
-          )}
-          {search.invocations.length > 0 ? (
-            <div>
-              <div className="eyebrow mb-1.5">Then the agent called</div>
-              <CallList calls={search.invocations} showRank={search.hits.length > 0} />
+                  {search.hits.map((h, i) => {
+                    const c = search.invocations.find((x) => x.id === h.id);
+                    const r = relevance[i] ?? 0;
+                    return (
+                      <li
+                        key={h.id}
+                        className="flex items-center gap-3 rounded-md px-2 py-1 hover:bg-forest-300/20"
+                      >
+                        <span className="w-5 text-right font-mono text-xs text-warm-muted">
+                          {i + 1}
+                        </span>
+                        <span
+                          className="flex w-40 items-center gap-2"
+                          title={`raw score ${h.score.toFixed(3)}`}
+                        >
+                          <ScoreBar ratio={r} color={KIND_COLOR[search.kind]} />
+                          <span className="w-10 text-right font-mono text-[11px] text-cream-dim">
+                            {formatPercent(r)}
+                          </span>
+                        </span>
+                        <a
+                          href={href("catalog", { tab: `${search.kind}s`, id: h.id })}
+                          className="min-w-0 flex-1 truncate font-mono text-[13px] text-cream-dim hover:text-cream hover:underline"
+                        >
+                          {h.id}
+                        </a>
+                        {c ? (
+                          <Pill tone={c.error ? "coral" : "green"}>
+                            {c.error ? "called · failed" : "called"}
+                          </Pill>
+                        ) : null}
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+              {search.invocations.length > 0 ? (
+                <div>
+                  <div className="eyebrow mb-1.5">Then the agent called</div>
+                  <CallList calls={search.invocations} showRank={search.hits.length > 0} />
+                </div>
+              ) : null}
+              <div className="font-mono text-[11px] text-warm-muted">{details}</div>
             </div>
           ) : null}
-          <div className="font-mono text-[11px] text-warm-muted">{details}</div>
         </div>
-      ) : null}
+      </div>
     </li>
   );
 }
