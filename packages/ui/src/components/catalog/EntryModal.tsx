@@ -5,7 +5,7 @@ import {
   formatMs,
   relativeTime,
 } from "@ratel-ai/burrow-model";
-import { Bot, ChevronRight, Search, X } from "lucide-react";
+import { ArrowUpRight, Bot, ChevronRight, Search, X } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { href } from "../../lib/route";
 import { cx } from "../ui";
@@ -56,8 +56,19 @@ export function Modal({
   );
 }
 
-/** One catalog entry, as Cloud's tool modal shows it, plus the trace's usage. */
-export function EntryModal({ entry, onClose }: { entry: CatalogEntry; onClose: () => void }) {
+/**
+ * One catalog entry, as Cloud's tool modal shows it, plus the trace's usage.
+ * Opened outside the catalog, `catalogHref` adds a quiet way there.
+ */
+export function EntryModal({
+  entry,
+  onClose,
+  catalogHref,
+}: {
+  entry: CatalogEntry;
+  onClose: () => void;
+  catalogHref?: string;
+}) {
   const tokens = definitionTokens(entry);
   const now = Date.now();
   return (
@@ -117,13 +128,28 @@ export function EntryModal({ entry, onClose }: { entry: CatalogEntry; onClose: (
         </div>
       ) : null}
 
-      {entry.kind === "tool" ? (
-        <a
-          className="inline-block text-xs text-green hover:underline"
-          href={href("inspector", { tool: entry.id })}
-        >
-          See searches that called this tool →
-        </a>
+      {entry.kind === "tool" || catalogHref ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {entry.kind === "tool" ? (
+            <a
+              className="text-xs text-green hover:underline"
+              href={href("inspector", { tool: entry.id })}
+            >
+              See searches that called this tool →
+            </a>
+          ) : (
+            <span />
+          )}
+          {catalogHref ? (
+            <a
+              href={catalogHref}
+              className="inline-flex items-center gap-1 text-xs text-warm-muted transition-colors hover:text-cream"
+            >
+              View in catalog
+              <ArrowUpRight className="size-3.5" strokeWidth={1.8} aria-hidden />
+            </a>
+          ) : null}
+        </div>
       ) : null}
     </Modal>
   );

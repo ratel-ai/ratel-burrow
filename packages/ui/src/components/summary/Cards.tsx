@@ -1,13 +1,15 @@
 import {
   type CapabilityOutcomes,
+  type CatalogEntry,
   formatCount,
   formatMs,
   formatPercent,
   type OutcomeSummary,
 } from "@ratel-ai/burrow-model";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useBurrow } from "../../lib/data";
 import { href } from "../../lib/route";
+import { EntryModal } from "../catalog/EntryModal";
 import { Card, cx, KindDot } from "../ui";
 
 const MIX_PARTS = [
@@ -68,10 +70,15 @@ export function RankMixCard({ outcomes }: { outcomes: OutcomeSummary }) {
 
 const TOP_TOOLS = 10;
 
-/** The busiest tools, with how often search missed each one. */
+/** The busiest tools, with how often search missed each one. A click opens the tool in place. */
 export function MostCalledCard({ byTool }: { byTool: Map<string, CapabilityOutcomes> }) {
-  const { health } = useBurrow();
+  const { health, catalog } = useBurrow();
   const [all, setAll] = useState(false);
+  const [open, setOpen] = useState<{ kind: "tool" | "skill" | "fact"; id: string } | null>(null);
+  const close = useCallback(() => setOpen(null), []);
+  const entry = open
+    ? (catalog[`${open.kind}s`].find((e: CatalogEntry) => e.id === open.id) ?? null)
+    : null;
   if (!health.tools.length) return null;
   const tools = all ? health.tools : health.tools.slice(0, TOP_TOOLS);
   const max = Math.max(1, ...health.tools.map((t) => t.calls));
@@ -100,14 +107,25 @@ export function MostCalledCard({ byTool }: { byTool: Map<string, CapabilityOutco
             return (
               <tr key={`${t.kind}:${t.id}`} className="border-b border-forest-300/40 last:border-0">
                 <td className="max-w-sm py-2 pr-4">
-                  <a
-                    href={href("catalog", { tab: `${t.kind}s`, id: t.id })}
-                    className="flex items-center gap-2 font-mono text-[13px] text-cream hover:underline"
-                    title={t.lastError ?? undefined}
-                  >
-                    <KindDot kind={t.kind} />
-                    <span className="truncate">{t.id}</span>
-                  </a>
+                  {catalog[`${t.kind}s`].some((e: CatalogEntry) => e.id === t.id) ? (
+                    <button
+                      type="button"
+                      onClick={() => setOpen({ kind: t.kind, id: t.id })}
+                      className="flex max-w-full items-center gap-2 text-left font-mono text-[13px] text-cream hover:underline"
+                      title={t.lastError ?? undefined}
+                    >
+                      <KindDot kind={t.kind} />
+                      <span className="truncate">{t.id}</span>
+                    </button>
+                  ) : (
+                    <span
+                      className="flex items-center gap-2 font-mono text-[13px] text-cream"
+                      title={t.lastError ?? undefined}
+                    >
+                      <KindDot kind={t.kind} />
+                      <span className="truncate">{t.id}</span>
+                    </span>
+                  )}
                 </td>
                 <td className="py-2 pr-4">
                   <div className="flex items-center gap-2">
@@ -150,6 +168,13 @@ export function MostCalledCard({ byTool }: { byTool: Map<string, CapabilityOutco
         >
           {all ? "Show fewer" : `Show all ${health.tools.length}`}
         </button>
+      ) : null}
+      {entry ? (
+        <EntryModal
+          entry={entry}
+          onClose={close}
+          catalogHref={href("catalog", { tab: `${entry.kind}s`, id: entry.id })}
+        />
       ) : null}
     </Card>
   );

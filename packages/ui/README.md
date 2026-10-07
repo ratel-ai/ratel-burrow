@@ -12,7 +12,7 @@ It polls the launcher's read-only API, tails trace files, and builds every view 
 | `src/components/IntentGraphForce.tsx` | the d3-force capability graph, ported from Ratel Cloud |
 | `src/components/adaptive/` | Boost panel, cluster table and drawer, summary tiles, graph state: Ratel Cloud's adaptive-ranking page ([ADR 0004](../../docs/adr/0004-adaptive-ranking-mirrors-cloud.md)) |
 | `src/components/catalog/` | catalog table (filter, sort, paging) and entry modal, ported from Ratel Cloud's tools catalog |
-| `src/components/summary/` | the Summary's tokens-saved hero, KPIs with trends, rank mix, most called, environment footer |
+| `src/components/summary/` | the Summary's tokens-saved hero, KPIs with trends, rank mix, most called (opens a tool in place), environment footer |
 | `src/lib/terms.ts` | one label and hint per metric, used on every page |
 | `src/components/Improvements.tsx` | the Overview's "What to improve" card |
 | `src/components/charts.tsx` | small single-series SVG charts (columns, line, smooth area) with hover tooltips |
