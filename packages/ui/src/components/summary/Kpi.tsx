@@ -1,8 +1,10 @@
+import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { cx } from "../ui";
 
 /** One headline number with what it counts and, when known, how it moved. */
 export function Kpi({
+  icon: Icon,
   label,
   value,
   sub,
@@ -10,6 +12,7 @@ export function Kpi({
   trend,
   hint,
 }: {
+  icon?: LucideIcon;
   label: string;
   value: string;
   sub: ReactNode;
@@ -20,13 +23,23 @@ export function Kpi({
   const dot = { green: "bg-green", amber: "bg-amber", coral: "bg-coral", muted: "bg-warm-muted" }[
     tone
   ];
+  const ink = {
+    green: "text-green",
+    amber: "text-amber",
+    coral: "text-coral",
+    muted: "text-warm-muted",
+  }[tone];
   return (
     <div
       className="rounded-xl border border-forest-300/60 bg-forest-600/70 px-4 py-3.5"
       title={hint}
     >
       <div className="eyebrow flex items-center gap-2">
-        <span className={cx("inline-block size-1.5 rounded-full", dot)} aria-hidden />
+        {Icon ? (
+          <Icon className={cx("size-3.5", ink)} strokeWidth={1.8} aria-hidden />
+        ) : (
+          <span className={cx("inline-block size-1.5 rounded-full", dot)} aria-hidden />
+        )}
         {label}
       </div>
       <div className="mt-1.5 flex items-center gap-2">

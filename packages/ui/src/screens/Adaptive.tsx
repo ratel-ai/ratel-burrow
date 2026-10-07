@@ -13,9 +13,14 @@ import {
 import { ChevronRight } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { BoostPanel } from "../components/adaptive/BoostPanel";
+import { BoostWarningBadge } from "../components/adaptive/BoostWarning";
 import { ClusterDrawer } from "../components/adaptive/ClusterDrawer";
 import { ClusterTable } from "../components/adaptive/ClusterTable";
-import { buildBoostWarning, GraphMeta, GraphWarnings } from "../components/adaptive/GraphMeta";
+import {
+  type BoostVerdict,
+  boostWarningVerdict,
+  GraphMeta,
+} from "../components/adaptive/GraphMeta";
 import { GraphState } from "../components/adaptive/GraphState";
 import { SummaryTiles } from "../components/adaptive/SummaryTiles";
 import { type GraphMode, IntentGraphForce } from "../components/IntentGraphForce";
@@ -37,7 +42,7 @@ export function AdaptiveScreen() {
   const state = useMemo(() => buildRankingState(allEvents), [allEvents]);
   const verdict =
     boost.online.fromTurn !== null ? boost.phases["ndcg@5"].online.verdict : boost.verdict;
-  const warning = buildBoostWarning(verdict);
+  const warned = boostWarningVerdict(verdict);
 
   const missing = useMemo(() => {
     const out = new Set<string>();
@@ -55,9 +60,16 @@ export function AdaptiveScreen() {
     <div className="space-y-5">
       {!loaded ? (
         <>
-          <PageHeader eyebrow="Adaptive ranking" title="Intent graph" />
-          <GraphWarnings warnings={warning ? [warning] : []} />
-          <GraphState state={state} seededShare={null} />
+          <header>
+            <div className="eyebrow">Adaptive ranking</div>
+            <div className="mt-1 flex items-center gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight text-cream">Intent graph</h1>
+              {warned ? <BoostWarningBadge verdict={warned} /> : null}
+            </div>
+            <div className="mt-3">
+              <GraphState state={state} seededShare={null} />
+            </div>
+          </header>
           <Empty title="No intent graph found">
             Save your graph with{" "}
             <Code>new LocalFileIntentGraphStorage({"{ path: burrowPaths().intentGraph }"})</Code> or
@@ -79,7 +91,7 @@ export function AdaptiveScreen() {
           missing={missing}
           state={state}
           boost={boost}
-          warning={warning}
+          warned={warned}
         />
       )}
     </div>
@@ -103,7 +115,7 @@ function GraphPage({
   doc,
   byteSize,
   file,
-  warning,
+  warned,
   missing,
   state,
   boost,
@@ -111,7 +123,7 @@ function GraphPage({
   doc: IntentGraphDocument;
   byteSize: number;
   file: string;
-  warning: string | null;
+  warned: BoostVerdict | null;
   missing: ReadonlySet<string>;
   state: RankingState;
   boost: BoostView;
@@ -164,12 +176,14 @@ function GraphPage({
         </div>
         <GraphMeta doc={doc} file={file} />
       </header>
-      <GraphWarnings warnings={warning ? [warning] : []} />
       <SummaryTiles tiles={tiles} byteSize={byteSize} />
 
       <section className="rounded-2xl border border-forest-300 bg-forest-600/60 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-lg font-semibold text-cream">Intent graph</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="font-display text-lg font-semibold text-cream">Intent graph</h2>
+            {warned ? <BoostWarningBadge verdict={warned} /> : null}
+          </div>
           <div
             role="radiogroup"
             aria-label="Graph drawing"

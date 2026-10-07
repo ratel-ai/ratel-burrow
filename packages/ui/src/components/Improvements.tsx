@@ -55,10 +55,12 @@ const FIX: Record<Kind, ReactNode> = {
  * suggestion, opening to the tools and example queries behind it.
  */
 export function Improvements({
+  id,
   items,
   searches,
   className,
 }: {
+  id?: string;
   items: readonly Improvement[];
   searches: number;
   className?: string;
@@ -72,7 +74,7 @@ export function Improvements({
     else groups.push({ kind: item.kind, items: [item] });
   }
   return (
-    <Card title="What to improve" className={className}>
+    <Card id={id} title="What to improve" className={className}>
       {groups.length === 0 ? (
         <p className="flex items-center gap-2 text-sm text-cream-dim">
           <Lightbulb className="size-4 text-green" strokeWidth={1.7} aria-hidden />

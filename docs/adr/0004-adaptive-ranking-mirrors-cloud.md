@@ -23,9 +23,11 @@ usage arm, present when an intent matched) and `usage_ranking_status` (`status`,
 
 ## Decision
 
-- The Adaptive ranking screen follows Cloud's graph page, in Cloud's order: graph meta and
-  warnings, graph state, summary tiles (with cap and size meters), the intent graph, the Boost
-  panel, "Show cluster details" (collapsed) wrapping Cloud's cluster table, and the cluster drawer.
+- The Adaptive ranking screen follows Cloud's graph page, in Cloud's order: graph meta, graph
+  state, summary tiles (with cap and size meters), the intent graph, the Boost panel, "Show
+  cluster details" (collapsed) wrapping Cloud's cluster table, and the cluster drawer. Where
+  Cloud shows the boost warning as a banner, Burrow shows a badge at the intent graph's top left
+  (same thresholds): hover for one line, click for the numbers and what to do.
   Cloud code is ported, not reinvented: `boost-view.ts` and its tests (`packages/model/src/boost/`),
   `BoostPanel`, `ClusterTable`, `ClusterDrawer`, `SummaryTiles`, chart math. Anything that edits
   (label overrides) is left out.

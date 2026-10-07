@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import { areaPath, gapSegments, smoothPath } from "../lib/chart";
 
 /**
  * Small single-series SVG charts in the dataviz house style: thin marks,
@@ -53,7 +54,8 @@ interface ChartProps {
   /** Fixed y-domain max (e.g. 1 for ratios); otherwise a nice max over the data. */
   yMax?: number;
   label: string;
-  kind?: "columns" | "line";
+  /** `area` draws a smooth monotone curve with a soft fill, breaking over gaps. */
+  kind?: "columns" | "line" | "area";
 }
 
 export function TimeChart({
@@ -66,6 +68,7 @@ export function TimeChart({
   kind = "columns",
 }: ChartProps) {
   const { ref, width } = useWidth();
+  const gradientId = useId();
   const [hover, setHover] = useState<number | null>(null);
   const valid = points.filter((p) => p.y !== null) as (Point & { y: number })[];
   const max = yMax ?? niceMax(Math.max(0, ...valid.map((p) => p.y)));
@@ -79,6 +82,12 @@ export function TimeChart({
   const first = points[0]?.x ?? 0;
   const span = (points.at(-1)?.x ?? first) - first;
   const labelEvery = Math.max(1, Math.ceil(n / Math.max(1, Math.floor(innerW / 70))));
+  // One tick per distinct label: day-wide labels over sub-day buckets would repeat.
+  const ticks: { i: number; text: string }[] = [];
+  points.forEach((p, i) => {
+    const text = timeLabel(p.x, span);
+    if (i % labelEvery === 0 && !ticks.some((t) => t.text === text)) ticks.push({ i, text });
+  });
 
   let tooltip: ReactNode = null;
   if (hover !== null && points[hover]) {
@@ -111,6 +120,14 @@ export function TimeChart({
         .join(" ")
     : "";
 
+  const base = PAD.top + innerH;
+  const runs =
+    kind === "area"
+      ? gapSegments(points.map((p) => p.y)).map((run) =>
+          run.map((i) => [xAt(i), yAt(points[i]?.y ?? 0)] as [number, number]),
+        )
+      : [];
+
   return (
     <div ref={ref} className="relative">
       {width > 0 ? (
@@ -141,19 +158,17 @@ export function TimeChart({
               </text>
             </g>
           ))}
-          {points.map((p, i) =>
-            i % labelEvery === 0 ? (
-              <text
-                key={p.x}
-                x={xAt(i)}
-                y={height - 6}
-                textAnchor="middle"
-                className="fill-warm-muted font-mono text-[10px]"
-              >
-                {timeLabel(p.x, span)}
-              </text>
-            ) : null,
-          )}
+          {ticks.map(({ i, text }) => (
+            <text
+              key={text}
+              x={xAt(i)}
+              y={height - 6}
+              textAnchor="middle"
+              className="fill-warm-muted font-mono text-[10px]"
+            >
+              {text}
+            </text>
+          ))}
           {kind === "columns"
             ? points.map((p, i) => {
                 if (p.y === null || p.y <= 0) return null;
@@ -172,6 +187,39 @@ export function TimeChart({
                 );
               })
             : null}
+          {kind === "area" ? (
+            <>
+              <defs>
+                <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              {runs.map((pts) => (
+                <g key={pts[0]?.[0]}>
+                  <path d={areaPath(pts, base)} fill={`url(#${gradientId})`} />
+                  <path
+                    d={smoothPath(pts)}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={2}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                </g>
+              ))}
+              {hover !== null && points[hover]?.y != null ? (
+                <circle
+                  cx={xAt(hover)}
+                  cy={yAt(points[hover]?.y ?? 0)}
+                  r={4.5}
+                  fill={color}
+                  stroke="var(--color-forest-600)"
+                  strokeWidth={2}
+                />
+              ) : null}
+            </>
+          ) : null}
           {kind === "line" && linePath ? (
             <>
               <path
