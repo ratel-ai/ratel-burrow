@@ -31,10 +31,10 @@ without a scale.
   (your code searched) or `baseline` (Ratel was only observing; the agent chose from its own full
   tool list). Rates, misses, problems and "What to improve" count `agent` and `direct` only
   (`servedOnly`), because a miss after a `baseline` search is not Ratel's. Observed searches are
-  labelled and compared separately ("When only watching" on the Summary).
+  labelled and compared separately (the "Observed" strip on the Summary).
 - **Needs attention** (`needsAttention` in `catalog-table.ts`) uses the same thresholds as the
   Summary's "What to improve" (`MIN_PATTERN`, `LOW_RANK_AFTER` in `improvements.ts`): missed ≥ 2,
-  mostly ranked below the top 3, or failed ≥ 2, so the Summary's verdict and its list agree.
+  mostly ranked below the top 3, or failed ≥ 2, so the Summary's "tools to fix" badge and its list agree.
 - **Relevance = share of the top hit**: each hit's score ÷ the best score in its own search,
   clamped to 0..1, so the top hit is 100% (`relevance.ts`). This is Ratel Cloud's Playground peek,
   and it is exact from today's traces, which record only raw scores. Raw scores stay available on

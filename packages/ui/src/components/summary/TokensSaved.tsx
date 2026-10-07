@@ -23,7 +23,10 @@ export function TokensSaved() {
   const reduction = full > 0 ? 1 - served / full : 0;
   const delta = previous ? relativeDelta(savings.savedTotal, previous.savedTotal) : null;
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-green/30 bg-forest-600/70 p-6">
+    <section
+      className="relative overflow-hidden rounded-2xl border border-green/30 bg-forest-600/70 p-6"
+      title="Estimated tokens Ratel kept out of your model's context, against sending every definition on every turn."
+    >
       <div className="pixel-grid pixel-grid-fade pointer-events-none absolute inset-0 opacity-40" />
       <div className="relative grid gap-8 lg:grid-cols-[1fr_1.2fr]">
         <div>
@@ -38,25 +41,25 @@ export function TokensSaved() {
             {delta ? <TrendChip text={delta.text} up={delta.up} good={delta.up} /> : null}
           </div>
           <p className="mt-2 text-sm text-cream-dim">
-            kept out of your model's context over {formatCount(savings.searches)} searches
+            over {formatCount(savings.searches)} searches
           </p>
           <div className="mt-5 flex flex-wrap gap-6">
-            <Mini label="Less context per search" value={formatPercent(reduction)} />
-            <Mini label="Saved per search" value={`~${formatCount(savings.savedPerSearch)}`} />
+            <Mini label="less context" value={`−${formatPercent(reduction)}`} />
+            <Mini label="per search" value={`~${formatCount(savings.savedPerSearch)}`} />
           </div>
         </div>
 
         <div className="space-y-4 self-center">
           <Compare
-            label="Sending every tool"
-            note={`all ${formatCount(savings.entryCount)} definitions, every turn`}
+            label="Without Ratel"
+            note={`${formatCount(savings.entryCount)} tools`}
             tokens={full}
             width={1}
             color="bg-coral/70"
           />
           <Compare
             label="With Ratel"
-            note={`only the top ${savings.avgReturned.toFixed(1)} tools`}
+            note={`top ${savings.avgReturned.toFixed(1)}`}
             tokens={served}
             width={full > 0 ? served / full : 0}
             color="bg-green"

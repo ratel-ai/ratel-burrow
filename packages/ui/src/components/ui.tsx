@@ -29,12 +29,14 @@ export function PageHeader({
 }
 
 export function Card({
+  id,
   title,
   hint,
   children,
   className,
   actions,
 }: {
+  id?: string;
   title?: string;
   hint?: ReactNode;
   children: ReactNode;
@@ -43,7 +45,11 @@ export function Card({
 }) {
   return (
     <section
-      className={cx("rounded-xl border border-forest-300/60 bg-forest-600/70 p-5", className)}
+      id={id}
+      className={cx(
+        "scroll-mt-6 rounded-xl border border-forest-300/60 bg-forest-600/70 p-5",
+        className,
+      )}
     >
       {title || actions ? (
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">

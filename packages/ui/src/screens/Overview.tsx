@@ -11,7 +11,16 @@ import {
   servedOnly,
   summarizeOutcomes,
 } from "@ratel-ai/burrow-model";
-import { AlertTriangle } from "lucide-react";
+import {
+  AlertTriangle,
+  CircleCheck,
+  CircleX,
+  Eye,
+  ListChecks,
+  SearchX,
+  Target,
+  TriangleAlert,
+} from "lucide-react";
 import { useMemo } from "react";
 import { Improvements } from "../components/Improvements";
 import { BurrowMascot } from "../components/Mascot";
@@ -48,14 +57,6 @@ export function OverviewScreen() {
 
   if (status === "ready" && sources.length === 0) return <SetupGuide />;
 
-  const verdict = [
-    savings.basis === "definitions"
-      ? `Ratel kept ~${formatCount(savings.savedTotal)} tokens out of your model's context`
-      : null,
-    first !== null ? `the first result was right ${formatPercent(first)} of the time` : null,
-    attention > 0 ? `${formatCount(attention)} tools need attention` : "nothing needs fixing",
-  ].filter(Boolean);
-
   return (
     <div className="space-y-5">
       <section className="relative overflow-hidden rounded-2xl border border-forest-300/60 bg-forest-600/60 px-6">
@@ -64,13 +65,26 @@ export function OverviewScreen() {
           <div className="min-w-0 py-6">
             <div className="eyebrow">Ratel Burrow{project ? ` · ${project}` : ""}</div>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight">See what Ratel is doing.</h1>
-            <p className="mt-2 max-w-md text-sm leading-relaxed text-cream-dim/80">
-              Ratel dug this burrow claw by claw. Now it settles in and watches every search, every
-              call, and everything it learns along the way.
-            </p>
-            {verdict.length ? (
-              <p className="mt-3 max-w-xl text-sm text-cream">{capitalize(verdict.join("; "))}.</p>
-            ) : null}
+            <p className="mt-2 text-sm text-cream-dim/80">Every search, call and lesson.</p>
+            {attention > 0 ? (
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("improve")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber/40 bg-amber/10 px-3 py-1 text-xs text-cream transition-colors hover:border-amber/70"
+              >
+                <TriangleAlert className="size-3.5 text-amber" strokeWidth={1.8} aria-hidden />
+                {plural(attention, "tool")} to fix
+              </button>
+            ) : (
+              <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-green/40 bg-green/10 px-3 py-1 text-xs text-cream">
+                <CircleCheck className="size-3.5 text-green" strokeWidth={1.8} aria-hidden />
+                All clear
+              </span>
+            )}
           </div>
           <BurrowMascot
             className="hidden w-80 shrink-0 sm:block"
@@ -93,53 +107,71 @@ export function OverviewScreen() {
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi
+          icon={Target}
           label={TERMS.firstResult.label}
           hint={TERMS.firstResult.hint}
           value={first === null ? "–" : formatPercent(first)}
-          sub={`${formatCount(outcomes.first)} of ${formatCount(outcomes.ranked)} calls`}
+          sub={`${formatCount(outcomes.first)} / ${formatCount(outcomes.ranked)} calls`}
           tone="green"
           trend={<Points now={first} before={prev ? firstResultRate(prev) : null} upIsGood />}
         />
         <Kpi
+          icon={ListChecks}
           label={TERMS.inResults.label}
           hint={TERMS.inResults.hint}
           value={inResults === null ? "–" : formatPercent(inResults)}
-          sub={`${formatCount(outcomes.ranked - outcomes.missed)} of ${formatCount(outcomes.ranked)} calls`}
+          sub={`${formatCount(outcomes.ranked - outcomes.missed)} / ${formatCount(outcomes.ranked)} calls`}
           tone={inResults !== null && inResults < 0.8 ? "amber" : "green"}
           trend={<Points now={inResults} before={prev ? inResultsRate(prev) : null} upIsGood />}
         />
         <Kpi
+          icon={SearchX}
           label={TERMS.missed.label}
           hint={TERMS.missed.hint}
           value={formatCount(outcomes.missed)}
-          sub={`across ${plural(missedTools, "tool")}`}
+          sub={plural(missedTools, "tool")}
           tone={outcomes.missed ? "amber" : "green"}
           trend={<Count now={outcomes.missed} before={prev?.missed ?? null} upIsGood={false} />}
         />
         <Kpi
+          icon={CircleX}
           label={TERMS.failed.label}
           hint={TERMS.failed.hint}
           value={formatCount(outcomes.failed)}
-          sub={`of ${formatCount(outcomes.calls)} calls`}
+          sub={`/ ${formatCount(outcomes.calls)} calls`}
           tone={outcomes.failed ? "coral" : "green"}
           trend={<Count now={outcomes.failed} before={prev?.failed ?? null} upIsGood={false} />}
         />
       </div>
 
       {observed.ranked > 0 ? (
-        <p
-          className="rounded-xl border border-forest-300/60 bg-forest-600/40 px-4 py-2.5 text-sm text-cream-dim"
-          title={ORIGINS.baseline.hint}
+        <div
+          className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-forest-300/60 bg-forest-600/40 px-4 py-2.5 text-sm"
+          title={`${ORIGINS.baseline.hint} ${formatCount(observed.ranked)} observed calls.`}
         >
-          <span className="eyebrow mr-2">When only watching</span>
-          on {formatCount(observed.ranked)} observed calls, the agent's pick was Ratel's first
-          result {formatPercent(observed.first / observed.ranked)} of the time and in its results{" "}
-          {formatPercent((observed.ranked - observed.missed) / observed.ranked)}. These are not in
-          the numbers above.
-        </p>
+          <span className="eyebrow flex items-center gap-2">
+            <Eye className="size-3.5" strokeWidth={1.7} aria-hidden />
+            {ORIGINS.baseline.label} · {formatCount(observed.ranked)}
+          </span>
+          <span className="flex items-center gap-1.5 text-cream-dim">
+            <Target className="size-3.5 text-warm-muted" strokeWidth={1.7} aria-hidden />
+            <span className="font-mono text-cream tabular">
+              {formatPercent(observed.first / observed.ranked)}
+            </span>
+            {TERMS.firstResult.label.toLowerCase()}
+          </span>
+          <span className="flex items-center gap-1.5 text-cream-dim">
+            <ListChecks className="size-3.5 text-warm-muted" strokeWidth={1.7} aria-hidden />
+            <span className="font-mono text-cream tabular">
+              {formatPercent((observed.ranked - observed.missed) / observed.ranked)}
+            </span>
+            {TERMS.inResults.label.toLowerCase()}
+          </span>
+          <span className="ml-auto text-xs text-warm-muted">not counted above</span>
+        </div>
       ) : null}
 
-      <Improvements items={improvements} searches={savings.searches} />
+      <Improvements id="improve" items={improvements} searches={savings.searches} />
 
       <div className="grid gap-5 lg:grid-cols-2">
         <RankMixCard outcomes={outcomes} />
@@ -152,8 +184,6 @@ export function OverviewScreen() {
     </div>
   );
 }
-
-const capitalize = (s: string) => (s ? s[0]?.toUpperCase() + s.slice(1) : s);
 
 function Points({
   now,
