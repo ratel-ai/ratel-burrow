@@ -24,7 +24,7 @@ import {
 import { useMemo } from "react";
 import { Improvements } from "../components/Improvements";
 import { BurrowMascot } from "../components/Mascot";
-import { MostCalledCard, RankMixCard, SearchQualityCard } from "../components/summary/Cards";
+import { MostCalledCard, RankMixCard } from "../components/summary/Cards";
 import { Environment } from "../components/summary/Environment";
 import { Kpi } from "../components/summary/Kpi";
 import { TokensSaved } from "../components/summary/TokensSaved";
@@ -173,10 +173,7 @@ export function OverviewScreen() {
 
       <Improvements id="improve" items={improvements} searches={savings.searches} />
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <RankMixCard outcomes={outcomes} />
-        <SearchQualityCard />
-      </div>
+      <RankMixCard outcomes={outcomes} />
 
       <MostCalledCard byTool={byTool} />
 

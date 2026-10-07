@@ -1,13 +1,11 @@
 import {
-  buildAgentHealth,
   type CapabilityOutcomes,
   formatCount,
   formatMs,
   formatPercent,
   type OutcomeSummary,
 } from "@ratel-ai/burrow-model";
-import { CircleCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useBurrow } from "../../lib/data";
 import { href } from "../../lib/route";
 import { Card, cx, KindDot } from "../ui";
@@ -40,17 +38,17 @@ export function RankMixCard({ outcomes }: { outcomes: OutcomeSummary }) {
               ) : null,
             )}
           </div>
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {MIX_PARTS.map((p) => (
-              <li key={p.key} className="flex items-center gap-2.5 text-sm">
-                <span className={cx("size-2.5 rounded-sm", p.color)} aria-hidden />
-                <span className="text-cream-dim">{p.label}</span>
-                <span className="ml-auto font-mono text-xs text-warm-muted">
-                  {formatCount(outcomes[p.key])}
-                </span>
-                <span className="w-12 text-right font-mono text-xs text-cream">
+              <li key={p.key}>
+                <div className="font-mono text-2xl text-cream tabular">
                   {formatPercent(outcomes[p.key] / total)}
-                </span>
+                </div>
+                <div className="mt-1 flex items-center gap-2 text-xs text-cream-dim">
+                  <span className={cx("size-2.5 shrink-0 rounded-sm", p.color)} aria-hidden />
+                  {p.label}
+                  <span className="font-mono text-warm-muted">{formatCount(outcomes[p.key])}</span>
+                </div>
               </li>
             ))}
           </ul>
@@ -64,80 +62,6 @@ export function RankMixCard({ outcomes }: { outcomes: OutcomeSummary }) {
           ) : null}
         </>
       )}
-    </Card>
-  );
-}
-
-/** Retries, waste and speed: only what actually happened, or one all-clear line. */
-export function SearchQualityCard() {
-  const { events, health } = useBurrow();
-  const agent = useMemo(() => buildAgentHealth(events, { floor: 1 }), [events]);
-  const tile = (key: string) => agent.tiles.find((t) => t.key === key);
-  const detours = tile("detours");
-  const wasted = tile("wasted_calls");
-  const junk = tile("junk");
-  const rows: { label: string; value: string; sub?: string; bad?: boolean; hint?: string }[] = [];
-  if (detours && detours.count > 0)
-    rows.push({
-      label: "Searched again for the same thing",
-      value: formatPercent(detours.value),
-      sub: `${formatCount(detours.count)} turns`,
-      bad: true,
-    });
-  if (wasted && wasted.count > 0)
-    rows.push({
-      label: "Wasted calls",
-      value: formatCount(wasted.count),
-      sub: "repeats, retries, or searching again",
-      bad: true,
-    });
-  if (health.totals.errors > 0)
-    rows.push({
-      label: "Failed calls",
-      value: formatCount(health.totals.errors),
-      sub: `of ${formatCount(health.totals.invocations)}`,
-      bad: true,
-    });
-  if (junk && junk.count > 0)
-    rows.push({
-      label: "Results that barely matched",
-      value: formatPercent(junk.value),
-      sub: `${formatCount(junk.count)} of ${formatCount(junk.n)} returned`,
-      hint: "Returned results scoring under 90% of the top one. Many of these is normal with a large top K; it costs context, not accuracy.",
-    });
-  return (
-    <Card title="Search quality">
-      {rows.some((r) => r.bad) ? null : (
-        <p className="mb-2 flex items-center gap-2 text-sm text-cream-dim">
-          <CircleCheck className="size-4 text-green" strokeWidth={1.7} aria-hidden />
-          All clear: no retries, failures or wasted calls.
-        </p>
-      )}
-      <ul className="divide-y divide-forest-300/50">
-        {rows.map((r) => (
-          <li key={r.label} className="flex items-baseline gap-3 py-2.5 text-sm" title={r.hint}>
-            <span className="text-cream-dim">{r.label}</span>
-            {r.sub ? (
-              <span className="ml-auto font-mono text-xs text-warm-muted">{r.sub}</span>
-            ) : null}
-            <span
-              className={cx(
-                "w-16 text-right font-mono tabular",
-                r.sub ? "" : "ml-auto",
-                r.bad ? "text-amber" : "text-cream",
-              )}
-            >
-              {r.value}
-            </span>
-          </li>
-        ))}
-        <li className="flex items-baseline gap-3 py-2.5 text-sm">
-          <span className="text-cream-dim">Typical time</span>
-          <span className="ml-auto font-mono text-xs text-warm-muted">
-            search {formatMs(health.searchLatency.p50)} · call {formatMs(health.invokeLatency.p50)}
-          </span>
-        </li>
-      </ul>
     </Card>
   );
 }
