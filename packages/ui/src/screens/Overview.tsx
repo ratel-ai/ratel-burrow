@@ -66,7 +66,10 @@ export function OverviewScreen() {
           <div className="min-w-0 py-6">
             <div className="eyebrow">Ratel Burrow{project ? ` · ${project}` : ""}</div>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight">See what Ratel is doing.</h1>
-            <p className="mt-2 text-sm text-cream-dim/80">Every search, call and lesson.</p>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-cream-dim/80">
+              Ratel dug this burrow claw by claw. Now it settles in and watches every search, every
+              call, and everything it learns along the way.
+            </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <RangePicker />
               {attention > 0 ? (
