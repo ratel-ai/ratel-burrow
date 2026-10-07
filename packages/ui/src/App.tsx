@@ -1,4 +1,4 @@
-import { RANGES, relativeTime, type TimeRange } from "@ratel-ai/burrow-model";
+import { relativeTime } from "@ratel-ai/burrow-model";
 import { Activity, BookOpen, ExternalLink, Home, type LucideIcon, Orbit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BadgerMark, BurrowMascot } from "./components/Mascot";
@@ -23,47 +23,6 @@ const NAV: { group: string; items: { page: Page; label: string; icon: LucideIcon
 ];
 
 const LIVE_WITHIN_MS = 5 * 60_000;
-
-const RANGE_LABEL: Record<TimeRange, string> = {
-  "24h": "24h",
-  "7d": "7d",
-  "30d": "30d",
-  all: "All",
-};
-
-/** The time range every page reads; windows end at the latest event. */
-function RangePicker() {
-  const { range, setRange, projects } = useBurrow();
-  if (projects.length === 0) return null;
-  return (
-    <div className="mb-4 px-2">
-      <div className="eyebrow mb-1">Time range</div>
-      <div
-        role="radiogroup"
-        aria-label="Time range"
-        className="grid grid-cols-4 gap-0.5 rounded-lg border border-forest-300 bg-base-deep/60 p-0.5"
-      >
-        {RANGES.map((r) => (
-          // biome-ignore lint/a11y/useSemanticElements: a segmented control
-          <button
-            key={r}
-            type="button"
-            role="radio"
-            aria-checked={range === r}
-            onClick={() => setRange(r)}
-            className={cx(
-              "rounded-md py-1 font-mono text-xs transition-colors",
-              range === r ? "bg-forest-300 text-cream" : "text-warm-muted hover:text-cream",
-            )}
-          >
-            {RANGE_LABEL[r]}
-          </button>
-        ))}
-      </div>
-      <div className="mt-1 px-0.5 text-[11px] text-warm-muted">ending at the latest event</div>
-    </div>
-  );
-}
 
 export function App() {
   return (
@@ -114,7 +73,6 @@ function Shell() {
           </span>
         </a>
         <ProjectSwitcher />
-        <RangePicker />
         <nav className="space-y-4">
           {NAV.map(({ group, items }) => (
             <div key={group}>

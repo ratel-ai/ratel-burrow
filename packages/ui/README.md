@@ -15,6 +15,7 @@ It polls the launcher's read-only API, tails trace files, and builds every view 
 | `src/components/summary/` | the Summary's tokens-saved hero, KPIs with trends, rank mix, most called (opens a tool in place), environment footer |
 | `src/lib/terms.ts` | one label and hint per metric, used on every page |
 | `src/components/Improvements.tsx` | the Overview's "What to improve" card |
+| `src/components/RangePicker.tsx` | the time range control beside the Summary, Searches and Catalogs titles |
 | `src/components/charts.tsx` | small single-series SVG charts (columns, line, smooth area) with hover tooltips |
 | `src/lib/chart.ts` | monotone curve math, ported from Ratel Cloud |
 | `src/components/Mascot.tsx` | the badger mark and the burrow mascot |

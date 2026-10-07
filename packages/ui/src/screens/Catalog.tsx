@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { CatalogTable } from "../components/catalog/CatalogTable";
 import { EntryModal } from "../components/catalog/EntryModal";
+import { RangePicker } from "../components/RangePicker";
 import { Code } from "../components/ui";
 import { useBurrow } from "../lib/data";
 import { href, useRoute } from "../lib/route";
@@ -77,11 +78,14 @@ function CatalogIndex() {
   const { catalog } = useBurrow();
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-7">
-      <header className="border-b border-forest-300 pb-5">
-        <div className="eyebrow">Capabilities</div>
-        <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-cream">
-          Catalogs
-        </h1>
+      <header className="flex flex-wrap items-end justify-between gap-4 border-b border-forest-300 pb-5">
+        <div>
+          <div className="eyebrow">Capabilities</div>
+          <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-cream">
+            Catalogs
+          </h1>
+        </div>
+        <RangePicker />
       </header>
       <section aria-label="Project catalogs" className="grid gap-3 md:grid-cols-3">
         {(["skills", "tools", "facts"] as const).map((kind) => {
@@ -176,10 +180,13 @@ function CatalogPage({ kind, params }: { kind: Kind; params: URLSearchParams }) 
               {meta.title}
             </h1>
           </div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-forest-300 bg-forest-600/55 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.09em] text-cream-dim">
-            <span className="size-1.5 rounded-full bg-green" aria-hidden />
-            Live from traces
-          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <RangePicker />
+            <span className="inline-flex items-center gap-2 rounded-full border border-forest-300 bg-forest-600/55 px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.09em] text-cream-dim">
+              <span className="size-1.5 rounded-full bg-green" aria-hidden />
+              Live from traces
+            </span>
+          </div>
         </header>
       </div>
 

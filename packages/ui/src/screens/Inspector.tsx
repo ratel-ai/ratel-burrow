@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScoreBar } from "../components/charts";
+import { RangePicker } from "../components/RangePicker";
 import { Card, cx, Empty, KindDot, PageHeader, Pill, SearchInput, Tabs } from "../components/ui";
 import { useBurrow } from "../lib/data";
 import { href, useRoute } from "../lib/route";
@@ -128,7 +129,11 @@ export function InspectorScreen() {
 
   return (
     <div>
-      <PageHeader eyebrow="Searches" title="Every search, and what happened next" />
+      <PageHeader
+        eyebrow="Searches"
+        title="Every search, and what happened next"
+        actions={<RangePicker />}
+      />
 
       {sessions.length === 0 ? (
         <Empty title="No searches yet">Searches appear here as soon as Ratel logs them.</Empty>

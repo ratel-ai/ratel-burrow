@@ -17,7 +17,8 @@ the intent graph — and renders them in your browser. It never changes your Rat
 - **Catalogs**: tools, skills and facts with their description, searchable text and schemas.
 - **Adaptive ranking**: the intent graph Ratel learns from usage, and whether it's helping.
 
-Every page reads the same time range (24h, 7d, 30d or all), ending at the latest event.
+Summary, Searches and Catalogs read the same time range (24h, 7d, 30d or all, picked beside
+each page title), ending at the latest event. Adaptive ranking reads the whole history.
 
 ## Quickstart
 

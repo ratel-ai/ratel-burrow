@@ -24,6 +24,7 @@ import {
 import { useMemo } from "react";
 import { Improvements } from "../components/Improvements";
 import { BurrowMascot } from "../components/Mascot";
+import { RangePicker } from "../components/RangePicker";
 import { MostCalledCard, RankMixCard } from "../components/summary/Cards";
 import { Environment } from "../components/summary/Environment";
 import { Kpi } from "../components/summary/Kpi";
@@ -66,25 +67,28 @@ export function OverviewScreen() {
             <div className="eyebrow">Ratel Burrow{project ? ` · ${project}` : ""}</div>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight">See what Ratel is doing.</h1>
             <p className="mt-2 text-sm text-cream-dim/80">Every search, call and lesson.</p>
-            {attention > 0 ? (
-              <button
-                type="button"
-                onClick={() =>
-                  document
-                    .getElementById("improve")
-                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-                className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber/40 bg-amber/10 px-3 py-1 text-xs text-cream transition-colors hover:border-amber/70"
-              >
-                <TriangleAlert className="size-3.5 text-amber" strokeWidth={1.8} aria-hidden />
-                {plural(attention, "tool")} to fix
-              </button>
-            ) : (
-              <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-green/40 bg-green/10 px-3 py-1 text-xs text-cream">
-                <CircleCheck className="size-3.5 text-green" strokeWidth={1.8} aria-hidden />
-                All clear
-              </span>
-            )}
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <RangePicker />
+              {attention > 0 ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById("improve")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                  className="inline-flex items-center gap-2 rounded-full border border-amber/40 bg-amber/10 px-3 py-1 text-xs text-cream transition-colors hover:border-amber/70"
+                >
+                  <TriangleAlert className="size-3.5 text-amber" strokeWidth={1.8} aria-hidden />
+                  {plural(attention, "tool")} to fix
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-2 rounded-full border border-green/40 bg-green/10 px-3 py-1 text-xs text-cream">
+                  <CircleCheck className="size-3.5 text-green" strokeWidth={1.8} aria-hidden />
+                  All clear
+                </span>
+              )}
+            </div>
           </div>
           <BurrowMascot
             className="hidden w-80 shrink-0 sm:block"
