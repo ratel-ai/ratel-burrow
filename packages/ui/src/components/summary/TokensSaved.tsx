@@ -1,4 +1,4 @@
-import { formatCount, formatPercent } from "@ratel-ai/burrow-model";
+import { formatCount, formatPercent, plural } from "@ratel-ai/burrow-model";
 import { useBurrow } from "../../lib/data";
 import { TimeChart } from "../charts";
 import { Code, cx } from "../ui";
@@ -69,17 +69,20 @@ export function TokensSaved() {
 
       {savings.series.length > 1 ? (
         <div className="relative mt-6 border-t border-forest-300/50 pt-4">
-          <div className="eyebrow mb-2">Saved over time</div>
+          <div className="eyebrow mb-2">Saved over time · running total</div>
           <TimeChart
-            label="Estimated tokens saved over time"
+            label="Estimated tokens saved, running total"
             points={savings.series.map((b) => ({
               x: b.start,
-              y: b.saved,
-              detail: [`${b.searches} searches`],
+              y: b.cumulative,
+              detail: b.searches
+                ? [`+${formatCount(b.saved)} · ${plural(b.searches, "search", "searches")}`]
+                : [],
             }))}
             color="var(--color-green)"
             format={(v) => formatCount(v)}
-            height={120}
+            height={140}
+            kind="area"
           />
         </div>
       ) : null}

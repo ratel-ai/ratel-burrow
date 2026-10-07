@@ -17,7 +17,8 @@ export interface SavingsEstimate {
   servedTokensPerSearch: number;
   savedPerSearch: number;
   savedTotal: number;
-  series: { start: number; searches: number; saved: number }[];
+  /** Every bucket from the first search to the last (empty ones included), with a running total. */
+  series: { start: number; searches: number; saved: number; cumulative: number }[];
 }
 
 export function estimateTokens(text: string): number {
@@ -56,16 +57,19 @@ export function estimateSavings(events: readonly TraceEvent[], catalog: Catalog)
 
   const series: SavingsEstimate["series"] = [];
   if (searches.length > 0) {
-    const first = searches[0]?.ts ?? 0;
-    const last = searches.at(-1)?.ts ?? first;
+    const first = searches.reduce((min, s) => Math.min(min, s.ts), Number.POSITIVE_INFINITY);
+    const last = searches.reduce((max, s) => Math.max(max, s.ts), first);
     const width = bucketWidth(first, last);
     const buckets = new Map<number, number>();
     for (const s of searches) {
       const start = Math.floor(s.ts / width) * width;
       buckets.set(start, (buckets.get(start) ?? 0) + 1);
     }
-    for (const [start, n] of [...buckets].sort((a, b) => a[0] - b[0])) {
-      series.push({ start, searches: n, saved: n * savedPerSearch });
+    let cumulative = 0;
+    for (let start = Math.floor(first / width) * width; start <= last; start += width) {
+      const n = buckets.get(start) ?? 0;
+      cumulative += n * savedPerSearch;
+      series.push({ start, searches: n, saved: n * savedPerSearch, cumulative });
     }
   }
 
